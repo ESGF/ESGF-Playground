@@ -1,17 +1,20 @@
 import json
 from datetime import datetime, timezone
 from random import choice, random
-from typing import Optional, Any, List, Dict, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 from urllib.parse import urljoin
-from typing_extensions import ParamSpec
 
 import httpx
+from esgf_generator.models import ESGFItem, ESGFItemProperties
+from esgf_generator.static_generators import (
+    generate_datetime,
+    generate_geometry,
+    instance_id,
+)
 from polyfactory import PostGenerated
 from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
-
-from esgf_generator.models import ESGFItem, ESGFItemProperties
-from esgf_generator.static_generators import generate_geometry, generate_datetime
+from typing_extensions import ParamSpec
 
 with open(
     "stac-esfg-factory-choices.json",
@@ -28,10 +31,6 @@ END_DATETIME = datetime.fromisoformat("3000-12-12T00:00:00").replace(
 
 P = ParamSpec("P")
 T = TypeVar("T")
-
-
-def instance_id(values: dict[str, str]) -> str:
-    return f"{values['mip_era']}.{values['activity_id']}.{values['institution_id']}.{values['source_id']}.{values['experiment_id']}.{values['variant_label']}.{values['table_id']}.{values['variable_id']}.{values['grid_label']}.v20220101"
 
 
 def generate_instance_id(
@@ -186,7 +185,6 @@ class ESGFItemFactory(ModelFactory[ESGFItem]):
     id = PostGenerated(generate_id)
     links = PostGenerated(generate_links)
     bbox = PostGenerated(generate_bbox)
-    citation_url = PostGenerated(generate_citation_url)
 
 
 def post_to_stac(data: ESGFItem) -> None:
