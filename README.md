@@ -9,6 +9,14 @@ This docker compose stac provides a full suite for simulating the ESGF publishin
 docker compose up
 ```
 
+To print a STAC record to the screen:
+
+```console
+cd esgf-generator
+poetry install
+poetrt run esgf_generator
+```
+
 ### Kakfa UI
 
 Go to http://localhost:8080 (the UI for KAFKA) and register and account with username `admin@admin.io` and password 
