@@ -187,6 +187,7 @@ class ESGFItemFactory(ModelFactory[ESGFItem]):
     links = PostGenerated(generate_links)
     bbox = PostGenerated(generate_bbox)
     citation_url = PostGenerated(generate_citation_url)
+    stac_version = "1.0.0"
 
 
 def post_to_stac(data: ESGFItem) -> None:

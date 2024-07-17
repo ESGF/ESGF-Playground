@@ -1,8 +1,7 @@
 version: '3.9'
 
 services:
-  # Core ESGF Search instance
-
+  # Core ESGF Node FastAPI Server
   app-elasticsearch-core:
     container_name: stac-fastapi-es-core
     image: ghcr.io/djspstfc/stac-fastapi-es:1.0
@@ -30,6 +29,7 @@ services:
     command:
       bash -c "./scripts/wait-for-it-es.sh es-container-core:9200 && python -m stac_fastapi.elasticsearch.app"
 
+  # Core ESGF Node ElasticSearch Server
   elasticsearch-core:
     container_name: es-container-core
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
@@ -41,6 +41,7 @@ services:
     ports:
       - "9200:9200"
 
+  # Core ESGF Node STAC Browser
   stac-browser-core:
     container_name: stac-browser-core
     image: esgfdeploy/stac-browser:v1
@@ -51,8 +52,19 @@ services:
     depends_on:
       - app-elasticsearch-core
 
-  # Secondary ESGF Search instance
+  # Core ESGF Node KAFKA Consumer
+  stac-consumer-core: # TODO build this
+    build:
+      context: esgf-consumer
+      dockerfile: Dockerfile
+    environment:
+      CONSUMER_GROUP: "esgf-east"
+      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
+      STAC_SERVER: "http://app-elasticsearch-core:8080"
+    depends_on:
+      - kafka1
 
+  # Secondary ESGF Node FastAPI
   app-elasticsearch-secondary:
     container_name: stac-fastapi-es-secondary
     image: ghcr.io/djspstfc/stac-fastapi-es:1.0
@@ -80,6 +92,7 @@ services:
     command:
       bash -c "./scripts/wait-for-it-es.sh es-container-secondary:9200 && python -m stac_fastapi.elasticsearch.app"
 
+  # Secondary ESGF Node ElasticSearch Server
   elasticsearch-secondary:
     container_name: es-container-secondary
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
@@ -91,6 +104,7 @@ services:
     ports:
       - "9201:9200"
 
+  # Secondary ESGF Node STAC Browser
   stac-browser-secondary:
     container_name: stac-browser
     image: esgfdeploy/stac-browser:v1
@@ -100,18 +114,8 @@ services:
     - "9013:8080"
     depends_on:
     - app-elasticsearch-secondary
-#
-  stac-consumer-core: # TODO build this
-    build:
-      context: esgf-consumer
-      dockerfile: Dockerfile
-    environment:
-      CONSUMER_GROUP: "esgf-east"
-      BOOTSTRAP_SERVERS : '["kafka1:19092"]'
-      STAC_SERVER: "http://app-elasticsearch-core:8080"
-    depends_on:
-      - kafka1
 
+  # Secondary ESGF Node KAFKA Consumer
   stac-consumer-secondary: # TODO build this
     build:
       context: esgf-consumer
@@ -119,10 +123,22 @@ services:
     environment:
       CONSUMER_GROUP: "secondary-node"
       BOOTSTRAP_SERVERS : '["kafka1:19092"]'
+      KAFKA_TOPICS: '.*\.historical\..*'
       STAC_SERVER: "http://app-elasticsearch-secondary:8080"
     depends_on:
       - kafka1
 
+  # Central ESGF Ingestion API Server
+  ingest_api:
+    build:
+      context: esgf-api-ingest
+      dockerfile: Dockerfile
+    environment:
+      BOOTSTRAP_SERVERS : '["kafka1:19092"]'
+    ports:
+      - "9050:8000"
+
+  # Central ESGF Zookeeper Server
   zoo1:
     image: confluentinc/cp-zookeeper:7.3.2
     hostname: zoo1
@@ -134,6 +150,7 @@ services:
       ZOOKEEPER_SERVER_ID: 1
       ZOOKEEPER_SERVERS: zoo1:2888:3888
 
+  # Central ESGF KAFKA Server
   kafka1:
     image: confluentinc/cp-kafka:7.3.2
     hostname: kafka1
@@ -161,6 +178,7 @@ services:
     depends_on:
       - zoo1
 
+  # Central ESGF Schema Registry (Optional)
   kafka-schema-registry:
     image: confluentinc/cp-schema-registry:7.3.2
     hostname: kafka-schema-registry
@@ -175,6 +193,7 @@ services:
       - zoo1
       - kafka1
 
+  # Central ESGF KAFKA REST API Server (Optional)
   kafka-rest-proxy:
     image: confluentinc/cp-kafka-rest:7.3.2
     hostname: kafka-rest-proxy
@@ -192,6 +211,7 @@ services:
       - kafka1
       - kafka-schema-registry
 
+  # Central ESGF KAFKA Connect Server (Optional)
   kafka-connect:
     image: confluentinc/cp-kafka-connect:7.3.2
     hostname: kafka-connect
@@ -233,6 +253,8 @@ services:
         confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:0.4.0
         /etc/confluent/docker/run
 
+
+  # Central ESGF KSQLDB Server (Optional)
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:7.3.2
     hostname: ksqldb-server
@@ -247,6 +269,7 @@ services:
       - zoo1
       - kafka1
 
+  # Central ESGF PostgrSQL Server (Optional)
   postgresql:
     hostname: postgresql
     container_name: postgresql
@@ -254,6 +277,7 @@ services:
       service: postgresql
       file: conduktor.yml
 
+  # Central ESGF Conduktor Console Server (Optional)
   conduktor-console:
     hostname: conduktor-console
     container_name: conduktor-console
