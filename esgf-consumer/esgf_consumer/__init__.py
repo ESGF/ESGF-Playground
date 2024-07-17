@@ -24,7 +24,6 @@ logger.setLevel(logging.DEBUG)
 async def consume(settings: Settings) -> None:
     logger.critical("Configuration: %s", settings)
     logger.critical("Waiting 10s before connection to Kafka...")
-    logger.critical("BADGER!")
     await asyncio.sleep(10)
 
 
