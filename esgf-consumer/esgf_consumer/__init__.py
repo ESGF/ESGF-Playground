@@ -16,44 +16,48 @@ from esgf_consumer.items import create_item
 from esgf_consumer.models import KafkaPayload, Error, ErrorType
 from esgf_consumer.producers import get_producer
 
+logging.getLogger().setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 async def consume(settings: Settings) -> None:
-    logger.debug("Configuration: %s", settings)
-    logger.info("Waiting 10s before connection to Kafka...")
+    logger.critical("Configuration: %s", settings)
+    logger.critical("Waiting 10s before connection to Kafka...")
+    logger.critical("BADGER!")
     await asyncio.sleep(10)
 
-    logger.debug("Starting consumer...")
+
+    logger.critical("Starting consumer...")
     consumer = await get_consumer(settings)
-    logger.info("Consumer started.")
+    logger.critical("Consumer started.")
 
-    logger.debug("Starting producer...")
+    logger.critical("Starting producer...")
     producer = await get_producer(settings)
-    logger.info("Producer started.")
+    logger.critical("Producer started.")
 
-    logger.debug("Starting http client...")
+    logger.critical("Starting http client...")
     async with httpx.AsyncClient() as client:
 
-        logger.info("http client started.")
+        logger.critical("http client started.")
         try:
             # Consume messages
             async for msg in consumer:
                 try:
-                    logger.debug("Received message: %s", msg)
+                    logger.critical("Received message: %s", msg)
                     data = KafkaPayload.model_validate_json(msg.value.decode("utf-8"))
 
                     await ensure_collection(
                         settings.stac_server, data.data.payload.collection_id, client
                     )
-                    logger.debug("Collection %s confirmed on %s", data.data.payload.collection_id, settings.stac_server)
+                    logger.critical("Collection %s confirmed on %s", data.data.payload.collection_id, settings.stac_server)
                     await create_item(
                         data.data.payload.collection_id,
                         data.data.payload.payload,
                         settings,
                         client,
                     )
-                    logger.info("Item %s created.", data.data.payload.payload.id)
+                    logger.critical("Item %s created.", data.data.payload.payload.id)
 
                 except httpx.HTTPError:
                     logger.exception("Http exception occurred")
@@ -94,8 +98,11 @@ async def consume(settings: Settings) -> None:
         finally:
             # Will leave consumer group; perform autocommit if enabled.
             await consumer.stop()
-            logger.info("Consumer stopped.")
+            logger.critical("Consumer stopped.")
             await producer.stop()
-            logger.info("Producer stopped.")
+            logger.critical("Producer stopped.")
 
     return None
+
+if __name__ == "__main__":
+    asyncio.run(consume(Settings()), debug=True)

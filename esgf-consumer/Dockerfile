@@ -9,4 +9,4 @@ RUN pip install poetry
 
 RUN poetry install
 
-ENTRYPOINT ["poetry", "run", "esgf_kafka_consumer"]
+ENTRYPOINT ["poetry", "run", "python", "esgf_consumer/__init__.py"]
