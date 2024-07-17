@@ -181,10 +181,10 @@ services:
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--list", "--zookeeper", "zookeeper:2181"]
-      interval: 5s
+      test: ["CMD", "nc", "-vz", "localhost", "9092"]
+      interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 3
     depends_on:
       - zoo1
 

@@ -1,25 +1,21 @@
-import json
 from datetime import datetime, timezone
-from random import choice, random
+from random import random
 from typing import Any, Dict, List, Optional, TypeVar
 from urllib.parse import urljoin
 
 import httpx
+from polyfactory import PostGenerated
+from polyfactory.factories.pydantic_factory import ModelFactory
+from polyfactory.fields import Use
+from typing_extensions import ParamSpec
+
+from esgf_generator.data import CHOICES
 from esgf_generator.models import ESGFItem, ESGFItemProperties
 from esgf_generator.static_generators import (
     generate_datetime,
     generate_geometry,
     instance_id,
 )
-from polyfactory import PostGenerated
-from polyfactory.factories.pydantic_factory import ModelFactory
-from polyfactory.fields import Use
-from typing_extensions import ParamSpec
-
-with open(
-    "stac-esfg-factory-choices.json",
-) as f:
-    CHOICES: Dict[str, List[str]] = json.load(f)
 
 API_URL = "http://ceda.stac.ac.uk"
 START_DATETIME = datetime.fromisoformat("1900-01-01T00:00:00").replace(
@@ -36,7 +32,9 @@ T = TypeVar("T")
 def generate_instance_id(
     name: str, values: dict[str, Any], *args: P.args, **kwarg: P.kwargs
 ) -> str:
-    return instance_id(values)
+    instance_id_value: str = instance_id(values)
+
+    return instance_id_value
 
 
 def generate_start_datetime(
@@ -80,7 +78,7 @@ def choose(choices: List[T]) -> T:
     bound method of the class Random.
     """
 
-    return choice(choices)
+    return ModelFactory.__random__.choice(choices)
 
 
 class ESGFPropertiesFactory(ModelFactory[ESGFItemProperties]):
@@ -147,6 +145,11 @@ def generate_bbox(
     return bbox
 
 
+def generate_properties() -> Dict[str, Any]:
+    result: Dict[str, Any] = ESGFPropertiesFactory.build().to_dict()
+    return result
+
+
 def generate_links(
     name: str, values: dict[str, Any], *args: P.args, **kwarg: P.kwargs
 ) -> List[Dict[str, Any]]:
@@ -180,14 +183,13 @@ def generate_links(
 class ESGFItemFactory(ModelFactory[ESGFItem]):
     __model__ = ESGFItem
     collection = Use(choose, CHOICES["collection"])
-    properties = ESGFPropertiesFactory.build().dict()
-    geometry = generate_geometry()
+    properties = Use(generate_properties)
+    geometry = Use(generate_geometry)
     id = PostGenerated(generate_id)
     links = PostGenerated(generate_links)
     bbox = PostGenerated(generate_bbox)
     citation_url = PostGenerated(generate_citation_url)
     stac_version = "1.0.0"
-
 
 
 def post_to_stac(data: ESGFItem) -> None:
@@ -201,16 +203,3 @@ def post_to_stac(data: ESGFItem) -> None:
         urljoin(API_URL, f"collections/{data.collection}/items"),
         content=data.json(),
     )
-
-
-def main() -> None:
-
-    data = ESGFItemFactory.build(
-        stac_extensions=[],
-    )
-
-    print(data.model_dump_json(indent=2))
-
-
-if __name__ == "__main__":
-    main()
