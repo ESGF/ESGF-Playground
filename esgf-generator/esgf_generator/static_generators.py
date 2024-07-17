@@ -1,6 +1,6 @@
 from datetime import datetime
-from random import uniform, random
-from typing import List, Dict, Union, Optional
+from random import random, uniform
+from typing import Dict, List, Optional, Union
 
 Coordinates = List[List[List[float]]]
 
@@ -27,8 +27,12 @@ def generate_geometry() -> Dict[str, Union[str, Coordinates]]:
 def generate_datetime(
     start_datetime: datetime, end_datetime: datetime
 ) -> Optional[datetime]:
-    if random() > 0.9:
+    if random() > 0.2:
         result: datetime = start_datetime + random() * (end_datetime - start_datetime)
         return result
     else:
         return None
+
+
+def instance_id(values: dict[str, str]) -> str:
+    return f"{values['mip_era']}.{values['activity_id']}.{values['institution_id']}.{values['source_id']}.{values['experiment_id']}.{values['variant_label']}.{values['table_id']}.{values['variable_id']}.{values['grid_label']}.v20220101"
