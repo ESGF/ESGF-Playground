@@ -1,3 +1,4 @@
+import warnings
 from datetime import datetime, timezone
 from random import random
 from typing import Any, Dict, List, Optional, TypeVar
@@ -203,3 +204,6 @@ def post_to_stac(data: ESGFItem) -> None:
         urljoin(API_URL, f"collections/{data.collection}/items"),
         content=data.json(),
     )
+    if response.status_code >= 300:
+        warnings.warn(f"Failed to post {data.json()}")
+
