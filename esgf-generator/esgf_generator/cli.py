@@ -1,7 +1,8 @@
+import random
+import time
+
 import click
 import httpx
-import time
-import random
 
 from esgf_generator import ESGFItemFactory
 
