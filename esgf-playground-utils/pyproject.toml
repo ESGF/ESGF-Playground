@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "esgf-playground-utils"
 version = "0.1.0"
-description = ""
+description = "Common library and models for the ESGF-Playground"
 authors = ["david.poulter <david.poulter@stfc.ac.uk>"]
 readme = "README.md"
 
@@ -9,13 +9,13 @@ readme = "README.md"
 python = "^3.12"
 pydantic-settings = "^2.3.4"
 stac-pydantic = "^3.1.1"
-aiokafka = "^0.11.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.10.1"
 isort = "^5.13.2"
 ruff = "^0.5.2"
 black = "^24.4.2"
+bandit = "^1.7.9"
 
 [tool.mypy]
 plugins = [
@@ -23,6 +23,14 @@ plugins = [
 ]
 strict = true
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+
+[tool.ruff.format]
+docstring-code-format = true
+indent-style = "space"
 
 [build-system]
 requires = ["poetry-core"]

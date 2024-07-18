@@ -1,0 +1,23 @@
+name: esgf-playground-utils
+
+on:
+  push:
+    paths:
+      - 'esgf-playground-utils/**'
+  pull_request:
+    paths:
+      - 'esgf-playground-utils/**'
+
+defaults:
+  run:
+    working-directory: ./esgf-playground-utils
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          use_pyproject: true

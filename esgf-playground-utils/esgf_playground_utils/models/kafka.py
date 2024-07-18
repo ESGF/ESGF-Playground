@@ -1,5 +1,5 @@
 """
-Models for esgf_consumer app.
+Models relating to Kakfa payloads for the ESGF-Playground.
 """
 
 from datetime import datetime
@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel
-from stac_pydantic.api import Item
+from stac_pydantic.item import Item
 
 
 class Payload(BaseModel):
@@ -24,7 +24,7 @@ class RevokePayload(BaseModel):
 
 
 class UpdatePayload(BaseModel):
-    item: Item | dict
+    item: Item
 
 
 class Data(BaseModel):

@@ -1,10 +1,9 @@
 """
-Models for esgf_consumer app.
+Models relating to STAC Items for the ESGF-Playground.
 """
 
 from pydantic import AnyUrl
-from stac_pydantic import ItemProperties
-from stac_pydantic.api import Item
+from stac_pydantic.item import Item, ItemProperties
 
 
 class ESGFItem(Item):
