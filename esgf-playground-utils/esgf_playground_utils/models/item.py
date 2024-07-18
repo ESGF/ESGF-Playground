@@ -1,5 +1,10 @@
+"""
+Models for esgf_consumer app.
+"""
+
 from pydantic import AnyUrl
-from stac_pydantic.item import Item, ItemProperties
+from stac_pydantic import ItemProperties
+from stac_pydantic.api import Item
 
 
 class ESGFItem(Item):

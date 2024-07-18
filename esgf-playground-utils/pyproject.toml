@@ -1,24 +1,21 @@
 [tool.poetry]
-name = "esgf-consumer"
+name = "esgf-playground-utils"
 version = "0.1.0"
-description = "A simple consumer for the ESGF playground"
+description = ""
 authors = ["david.poulter <david.poulter@stfc.ac.uk>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-httpx = "^0.27.0"
-click = "^8.1.7"
-esgf-playground-utils = "0.1.0"
+pydantic-settings = "^2.3.4"
+stac-pydantic = "^3.1.1"
+aiokafka = "^0.11.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.10.1"
 isort = "^5.13.2"
 ruff = "^0.5.2"
 black = "^24.4.2"
-
-#[tool.poetry.scripts]
-#esgf_consumer = "esgf_consumer"
 
 [tool.mypy]
 plugins = [

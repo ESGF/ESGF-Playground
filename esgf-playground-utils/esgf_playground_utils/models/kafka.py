@@ -11,9 +11,20 @@ from stac_pydantic.api import Item
 
 
 class Payload(BaseModel):
-    method: Literal["POST"]
+    method: Literal["POST", "PUT", "PATCH", "DELETE"]
     collection_id: str
-    payload: Item
+
+
+class CreatePayload(BaseModel):
+    item: Item
+
+
+class RevokePayload(BaseModel):
+    item_id: str
+
+
+class UpdatePayload(BaseModel):
+    item: Item | dict
 
 
 class Data(BaseModel):
@@ -39,7 +50,7 @@ class Metadata(BaseModel):
     schema_version: str
 
 
-class KafkaPayload(BaseModel):
+class KafkaEvent(BaseModel):
     metadata: Metadata
     data: Data
 
