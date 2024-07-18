@@ -207,6 +207,7 @@ Done
 - [ ] Improve CLI functionality
 - [ ] Move common modules and models to a shared library on pypi
 - [ ] Handle POSTs to STAC if the item already exists (should produce an error)
+- [ ] MongoDB (or alternative) persistent message dump
 
 ## Basic Use
 
