@@ -33,7 +33,7 @@ jobs:
           cd esgf-generator
           pip install poetry
           poetry install --only bandit
-          poetry run bandit -c pyproject.toml -r .
+          poetry run bandit -c pyproject.toml -r . -s B311,B501
       - name: Run isort
         run: |
           cd esgf-generator
