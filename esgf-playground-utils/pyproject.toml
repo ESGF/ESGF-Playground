@@ -29,6 +29,10 @@ ruff = "^0.5.2"
 [tool.poetry.group.isort.dependencies]
 isort = "^5.13.2"
 
+
+[tool.poetry.group.xenon.dependencies]
+xenon = "^0.9.1"
+
 [tool.mypy]
 plugins = [
   "pydantic.mypy"
