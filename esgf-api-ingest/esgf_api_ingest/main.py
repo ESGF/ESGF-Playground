@@ -5,7 +5,7 @@ from typing import Any, AsyncGenerator, Optional, Union
 
 import aiokafka
 from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utlis.models.kafka import (
+from esgf_playground_utils.models.kafka import (
     Auth,
     CreatePayload,
     Data,

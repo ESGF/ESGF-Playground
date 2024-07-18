@@ -4,7 +4,8 @@ from urllib.parse import urljoin
 import httpx
 from stac_pydantic.item import Item
 
-from esgf_consumer.config import Settings
+from esgf_playground_utils.config.kafka import Settings
+
 
 logger = logging.getLogger(__name__)
 

@@ -9,10 +9,10 @@ import traceback
 import httpx
 from aiokafka.errors import KafkaError
 from esgf_playground_utils.models.kafka import Error, ErrorType, KafkaEvent
+from esgf_playground_utils.config.kafka import Settings
 from pydantic import ValidationError
 
 from esgf_consumer.collection import ensure_collection
-from esgf_consumer.config import Settings
 from esgf_consumer.consumers import get_consumer
 from esgf_consumer.items import create_item
 from esgf_consumer.producers import get_producer
