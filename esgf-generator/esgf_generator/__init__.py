@@ -206,4 +206,3 @@ def post_to_stac(data: ESGFItem) -> None:
     )
     if response.status_code >= 300:
         warnings.warn(f"Failed to post {data.json()}")
-
