@@ -26,7 +26,7 @@ jobs:
         run: |
           cd esgf-playground-utils
           pip install poetry
-          poetry install --only mypy
+          poetry install
           poetry run mypy .
       - name: Run bandit
         run: |
@@ -46,3 +46,9 @@ jobs:
           pip install poetry
           poetry install --only ruff
           poetry run ruff check
+      - name: Run audit
+        run: |
+          cd esgf-playground-utils
+          pip install poetry
+          poetry self add poetry-audit-plugin
+          poetry audit

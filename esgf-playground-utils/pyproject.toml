@@ -16,7 +16,6 @@ black = "^24.4.2"
 
 [tool.poetry.group.mypy.dependencies]
 mypy = "^1.10.1"
-pydantic = "^2.8.2"
 
 
 [tool.poetry.group.bandit.dependencies]
