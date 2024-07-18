@@ -8,8 +8,8 @@ import traceback
 
 import httpx
 from aiokafka.errors import KafkaError
-from esgf_playground_utils.models.kafka import Error, ErrorType, KafkaEvent
 from esgf_playground_utils.config.kafka import Settings
+from esgf_playground_utils.models.kafka import Error, ErrorType, KafkaEvent
 from pydantic import ValidationError
 
 from esgf_consumer.collection import ensure_collection

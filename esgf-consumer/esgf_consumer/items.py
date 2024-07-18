@@ -2,10 +2,8 @@ import logging
 from urllib.parse import urljoin
 
 import httpx
-from stac_pydantic.item import Item
-
 from esgf_playground_utils.config.kafka import Settings
-
+from stac_pydantic.item import Item
 
 logger = logging.getLogger(__name__)
 
