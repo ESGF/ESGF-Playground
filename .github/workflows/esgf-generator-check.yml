@@ -57,4 +57,4 @@ jobs:
           cd esgf-generator
           pip install poetry
           poetry install --only xenon
-          poetry audit
+          poetry run xenon . -a A -b A -m A

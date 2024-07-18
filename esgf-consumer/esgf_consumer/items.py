@@ -2,8 +2,9 @@ import logging
 from urllib.parse import urljoin
 
 import httpx
-from esgf_consumer.config import Settings
 from stac_pydantic.item import Item
+
+from esgf_consumer.config import Settings
 
 logger = logging.getLogger(__name__)
 

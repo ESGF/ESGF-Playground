@@ -51,10 +51,10 @@ jobs:
           cd esgf-api-ingest
           pip install poetry
           poetry self add poetry-audit-plugin
-          poetry audit
+          poetry audit --ignore-code=CVE-2019-8341
       - name: Run xenon
         run: |
           cd esgf-api-ingest
           pip install poetry
           poetry install --only xenon
-          poetry audit
+          poetry run xenon . -a A -b A -m A

@@ -1,21 +1,13 @@
-import asyncio
-import json
 import logging
-import os
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, NoReturn, Optional, Union
+from typing import Any, AsyncGenerator, Optional, Union
 
 import aiokafka
 from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utlis.models.kafka import (
-    Auth,
-    CreatePayload,
-    Data,
-    KafkaEvent,
-    Metadata,
-    Publisher,
-)
+from esgf_playground_utlis.models.kafka import (Auth, CreatePayload, Data,
+                                                KafkaEvent, Metadata,
+                                                Publisher)
 from fastapi import FastAPI, HTTPException
 from stac_pydantic.item import Item
 from stac_pydantic.item_collection import ItemCollection
@@ -53,6 +45,9 @@ async def post_message(event: KafkaEvent) -> None:
         value = event.model_dump_json().encode("utf8")
         topic = get_topic(event.data.payload.item)
 
+        if producer is None:
+            raise Exception("Kafka producer is not initialized")
+
         await producer.send_and_wait(topic, value)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=repr(exc)) from exc
@@ -67,7 +62,7 @@ async def post_item(collection_id: str, item: Item) -> None:
         auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0"
     )
     event = KafkaEvent(metadata=metadata, data=data)
-    post_message(event)
+    await post_message(event)
 
 
 @app.post("/{collection_id}/items", status_code=202)
