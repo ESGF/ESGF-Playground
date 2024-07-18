@@ -8,10 +8,6 @@ on:
     paths:
       - 'esgf-playground-utils/**'
 
-defaults:
-  run:
-    working-directory: ./esgf-playground-utils
-
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -20,7 +16,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: psf/black@stable
-        with:
-          options: '--check --verbose'
-          use_pyproject: true
+      - name: Run black
+        run: |
+          cd esgf-playground-utils
+          pip install poetry
+          poetry install --with black
+          poetry run black --check
