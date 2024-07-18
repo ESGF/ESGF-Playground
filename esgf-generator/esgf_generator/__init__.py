@@ -1,16 +1,17 @@
+import warnings
 from datetime import datetime, timezone
 from random import random
 from typing import Any, Dict, List, Optional, TypeVar
 from urllib.parse import urljoin
 
 import httpx
+from esgf_playgroud.models.item import ESGFItem, ESGFItemProperties
 from polyfactory import PostGenerated
 from polyfactory.factories.pydantic_factory import ModelFactory
 from polyfactory.fields import Use
 from typing_extensions import ParamSpec
 
 from esgf_generator.data import CHOICES
-from esgf_generator.models import ESGFItem, ESGFItemProperties
 from esgf_generator.static_generators import (
     generate_datetime,
     generate_geometry,
@@ -203,3 +204,5 @@ def post_to_stac(data: ESGFItem) -> None:
         urljoin(API_URL, f"collections/{data.collection}/items"),
         content=data.json(),
     )
+    if response.status_code >= 300:
+        warnings.warn(f"Failed to post {data.json()}")

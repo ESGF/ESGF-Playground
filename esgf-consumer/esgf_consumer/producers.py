@@ -1,6 +1,5 @@
 from aiokafka import AIOKafkaProducer
-
-from esgf_consumer.config import Settings
+from esgf_playground_utils.config.kafka import Settings
 
 
 async def get_producer(settings: Settings) -> AIOKafkaProducer:

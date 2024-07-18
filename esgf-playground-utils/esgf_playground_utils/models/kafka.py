@@ -1,5 +1,5 @@
 """
-Models for esgf_consumer app.
+Models relating to Kakfa payloads for the ESGF-Playground.
 """
 
 from datetime import datetime
@@ -7,13 +7,24 @@ from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel
-from stac_pydantic.api import Item
+from stac_pydantic.item import Item
 
 
 class Payload(BaseModel):
-    method: Literal["POST"]
+    method: Literal["POST", "PUT", "PATCH", "DELETE"]
     collection_id: str
-    payload: Item
+
+
+class CreatePayload(BaseModel):
+    item: Item
+
+
+class RevokePayload(BaseModel):
+    item_id: str
+
+
+class UpdatePayload(BaseModel):
+    item: Item
 
 
 class Data(BaseModel):
@@ -39,7 +50,7 @@ class Metadata(BaseModel):
     schema_version: str
 
 
-class KafkaPayload(BaseModel):
+class KafkaEvent(BaseModel):
     metadata: Metadata
     data: Data
 

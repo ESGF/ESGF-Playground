@@ -7,6 +7,6 @@ COPY . /opt/esgf-api-ingest
 
 RUN pip install poetry
 
-RUN poetry install
+RUN poetry install --only main
 
 ENTRYPOINT ["poetry", "run", "uvicorn", "esgf_api_ingest.main:app", "--host", "0.0.0.0"]

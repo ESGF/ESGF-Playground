@@ -1,3 +1,7 @@
+"""
+Models relating to STAC Items for the ESGF-Playground.
+"""
+
 from pydantic import AnyUrl
 from stac_pydantic.item import Item, ItemProperties
 

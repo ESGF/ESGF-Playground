@@ -1,7 +1,8 @@
+import random
+import time
+
 import click
 import httpx
-import time
-import random
 
 from esgf_generator import ESGFItemFactory
 
@@ -39,6 +40,8 @@ def esgf_generator(count: int, publish: bool, delay: bool) -> None:
                     f"http://localhost:9050/{instance.collection}/items",
                     content=instance.model_dump_json(),
                 )
+                if result.status_code >= 300:
+                    raise Exception(result.content)
 
         click.echo(instance.model_dump_json(indent=2))
 

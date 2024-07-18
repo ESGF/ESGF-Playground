@@ -1,68 +1,25 @@
-import asyncio
-import os
-import json
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Union, NoReturn, Optional, Literal, AsyncGenerator, Any
+from typing import Any, AsyncGenerator, Optional, Union
 
 import aiokafka
-import logging
+from esgf_playground_utils.config.kafka import Settings
+from esgf_playground_utils.models.kafka import (
+    Auth,
+    CreatePayload,
+    Data,
+    KafkaEvent,
+    Metadata,
+    Publisher,
+)
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from stac_pydantic.item import Item
 from stac_pydantic.item_collection import ItemCollection
-from esgf_api_ingest.config import Settings
 
 logger = logging.getLogger(__name__)
 settings = Settings()
 producer: Optional[aiokafka.AIOKafkaProducer] = None
-
-
-class BaseMessage(BaseModel):
-    type: str
-    collection_id: str
-
-
-class Message(BaseMessage):
-    item: Item
-
-
-class ReferenceMessage(BaseMessage):
-    item_id: str
-
-
-class Payload(BaseModel):
-    method: Literal["POST"]
-    collection_id: str
-    payload: Item
-
-
-class Data(BaseModel):
-    type: Literal["STAC"]
-    version: Literal["1.0.0"]
-    payload: Payload
-
-
-class Auth(BaseModel):
-    client_id: str
-    server: str
-
-
-class Publisher(BaseModel):
-    package: str
-    version: str
-
-
-class Metadata(BaseModel):
-    auth: Auth
-    publisher: Publisher
-    time: datetime
-    schema_version: str
-
-
-class KafkaPayload(BaseModel):
-    metadata: Metadata
-    data: Data
 
 
 @asynccontextmanager
@@ -88,18 +45,35 @@ def get_topic(item: Item) -> str:
     return f"{mip_era}.{experiment}.{source_id}"
 
 
-async def post_message(data: KafkaPayload) -> None:
+async def post_message(event: KafkaEvent) -> None:
     try:
-        value = data.model_dump_json().encode("utf8")
-        topic = get_topic(data.data.payload.payload)
+        value = event.model_dump_json().encode("utf8")
+        topic = get_topic(event.data.payload.item)
+
+        if producer is None:
+            raise Exception("Kafka producer is not initialized")
 
         await producer.send_and_wait(topic, value)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=repr(exc)) from exc
 
 
+async def post_item(collection_id: str, item: Item) -> None:
+    payload = CreatePayload(method="POST", collection_id=collection_id, item=item)
+    data = Data(type="STAC", version="1.0.0", payload=payload)
+    auth = Auth(client_id="esgf-generator", server="docker-compose-local")
+    publisher = Publisher(package="esgf-generator", version="0.1.0")
+    metadata = Metadata(
+        auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0"
+    )
+    event = KafkaEvent(metadata=metadata, data=data)
+    await post_message(event)
+
+
 @app.post("/{collection_id}/items", status_code=202)
-async def create_item(collection_id: str, item: Union[Item, ItemCollection]) -> Union[Item, ItemCollection]:
+async def create_item(
+    collection_id: str, item: Union[Item, ItemCollection]
+) -> Union[Item, ItemCollection]:
     """Add CREATE message to kafka event stream.
 
     Args:
@@ -109,27 +83,13 @@ async def create_item(collection_id: str, item: Union[Item, ItemCollection]) -> 
     Returns:
         Optional[stac_types.Item]: The item, or `None` if the item was successfully deleted.
     """
-    logger.info(f"Creating {collection_id} item")
+    logger.info("Creating %s item", collection_id)
     if isinstance(item, Item):
-        payload = Payload(method="POST", collection_id=collection_id, payload=item)
-        data = Data(type="STAC", version="1.0.0", payload=payload)
-        auth = Auth(client_id="esgf-generator", server="docker-compose-local")
-        publisher = Publisher(package="esgf-generator", version="0.1.0")
-        metadata = Metadata(auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0")
-        message = KafkaPayload(metadata=metadata, data=data)
-
-        await post_message(message)
+        await post_item(collection_id, item)
 
     else:
-        for item in item:
-            payload = Payload(method="POST", collection_id=collection_id, payload=item)
-            data = Data(type="STAC", version="1.0.0", payload=payload)
-            auth = Auth(client_id="esgf-generator", server="docker-compose-local")
-            publisher = Publisher(package="esgf-generator", version="0.1.0")
-            metadata = Metadata(auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0")
-            message = KafkaPayload(metadata=metadata, data=data)
-
-            await post_message(message)
+        for i in item:
+            await post_item(collection_id, i)
 
     return item
 
