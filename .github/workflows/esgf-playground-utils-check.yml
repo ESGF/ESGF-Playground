@@ -21,4 +21,4 @@ jobs:
           cd esgf-playground-utils
           pip install poetry
           poetry install --with black
-          poetry run black --check
+          poetry run black ./ --verbose --check
