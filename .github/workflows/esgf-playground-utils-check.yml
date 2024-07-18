@@ -22,5 +22,5 @@ jobs:
           python-version: '3.12'
       - uses: psf/black@stable
         with:
-          options: ''--check --verbose'
+          options: '--check --verbose'
           use_pyproject: true
