@@ -13,14 +13,28 @@ click = "^8.1.7"
 esgf-playground-utils = "0.1.0"
 
 
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.10.1"
-isort = "^5.13.2"
-ruff = "^0.5.2"
+[tool.poetry.group.black.dependencies]
 black = "^24.4.2"
 
-[tool.poetry.scripts]
-esgf_generator = "esgf_generator.cli:esgf_generator"
+
+[tool.poetry.group.mypy.dependencies]
+mypy = "^1.10.1"
+
+
+[tool.poetry.group.bandit.dependencies]
+bandit = "^1.7.9"
+
+
+[tool.poetry.group.ruff.dependencies]
+ruff = "^0.5.2"
+
+
+[tool.poetry.group.isort.dependencies]
+isort = "^5.13.2"
+
+
+[tool.poetry.group.xenon.dependencies]
+xenon = "^0.9.1"
 
 [tool.mypy]
 plugins = [
@@ -28,6 +42,17 @@ plugins = [
 ]
 strict = true
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+
+[tool.ruff.format]
+docstring-code-format = true
+indent-style = "space"
+
+[tool.poetry.scripts]
+esgf_generator = "esgf_generator.cli:esgf_generator"
 
 [build-system]
 requires = ["poetry-core"]

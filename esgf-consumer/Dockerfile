@@ -7,6 +7,6 @@ COPY . /opt/esgf-consumer
 
 RUN pip install poetry
 
-RUN poetry install
+RUN poetry install --only main
 
 ENTRYPOINT ["poetry", "run", "python", "esgf_consumer/__init__.py"]
