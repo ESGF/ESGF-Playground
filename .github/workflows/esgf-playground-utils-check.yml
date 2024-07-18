@@ -9,7 +9,7 @@ on:
       - 'esgf-playground-utils/**'
 
 jobs:
-  lint:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,5 +20,29 @@ jobs:
         run: |
           cd esgf-playground-utils
           pip install poetry
-          poetry install --with black
+          poetry install --only black
           poetry run black ./ --verbose --check
+      - name: Run mypy
+        run: |
+          cd esgf-playground-utils
+          pip install poetry
+          poetry install --only mypy
+          poetry run mypy .
+      - name: Run bandit
+        run: |
+          cd esgf-playground-utils
+          pip install poetry
+          poetry install --only bandit
+          poetry run bandit -c pyproject.toml -r .
+      - name: Run isort
+        run: |
+          cd esgf-playground-utils
+          pip install poetry
+          poetry install --only isort
+          poetry run isort . --check
+      - name: Run ruff
+        run: |
+          cd esgf-playground-utils
+          pip install poetry
+          poetry install --only ruff
+          poetry run ruff check
