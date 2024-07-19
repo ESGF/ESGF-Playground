@@ -5,18 +5,17 @@ from typing import Any, Dict, List, Optional, TypeVar
 from urllib.parse import urljoin
 
 import httpx
-from esgf_playgroud.models.item import ESGFItem, ESGFItemProperties
-from polyfactory import PostGenerated
-from polyfactory.factories.pydantic_factory import ModelFactory
-from polyfactory.fields import Use
-from typing_extensions import ParamSpec
-
 from esgf_generator.data import CHOICES
 from esgf_generator.static_generators import (
     generate_datetime,
     generate_geometry,
     instance_id,
 )
+from esgf_playground_utils.models.item import ESGFItem, ESGFItemProperties
+from polyfactory import PostGenerated
+from polyfactory.factories.pydantic_factory import ModelFactory
+from polyfactory.fields import Use
+from typing_extensions import ParamSpec
 
 API_URL = "http://ceda.stac.ac.uk"
 START_DATETIME = datetime.fromisoformat("1900-01-01T00:00:00").replace(
@@ -104,6 +103,7 @@ class ESGFPropertiesFactory(ModelFactory[ESGFItemProperties]):
     variable_id = Use(choose, CHOICES["variable_id"])
     variant_label = Use(choose, CHOICES["variant_label"])
     instance_id = PostGenerated(generate_instance_id)
+    title = PostGenerated(generate_instance_id)
     further_info_url = PostGenerated(generate_further_info_url)
     citation_url = PostGenerated(generate_citation_url)
     datetime = generate_datetime(START_DATETIME, END_DATETIME)
