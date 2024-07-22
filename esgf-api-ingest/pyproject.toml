@@ -10,7 +10,7 @@ python = "^3.12"
 fastapi = "^0.111.1"
 uvicorn = "^0.30.1"
 aiokafka = "^0.11.0"
-esgf-playground-utils = "^0.2.0"
+esgf-playground-utils = "^0.3.0"
 
 [tool.poetry.group.black.dependencies]
 black = "^24.4.2"
