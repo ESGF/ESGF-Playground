@@ -236,13 +236,13 @@ files = [
 
 [[package]]
 name = "esgf-playground-utils"
-version = "0.1.0"
+version = "0.2.0"
 description = "Common library and models for the ESGF-Playground"
 optional = false
 python-versions = "<4.0,>=3.12"
 files = [
-    {file = "esgf_playground_utils-0.1.0-py3-none-any.whl", hash = "sha256:df9f4c1922c11ec9f4d0b9ddf00f1fe948b3974c69997db6dac0aff52bc1f3fe"},
-    {file = "esgf_playground_utils-0.1.0.tar.gz", hash = "sha256:2603aeffc406c72af89f3531c814733a029fb3afdcf8c2b57d995693005abd9b"},
+    {file = "esgf_playground_utils-0.2.0-py3-none-any.whl", hash = "sha256:f2650997831c3e2f88155489cd684e31ddb4503908af8e7a46c6d0ed6816d5ba"},
+    {file = "esgf_playground_utils-0.2.0.tar.gz", hash = "sha256:0e37e9acd057e523d379b0568722e28e6dba16e19693f2820626c37f3424b847"},
 ]
 
 [package.dependencies]
@@ -977,4 +977,4 @@ requests = ">=2.0,<3.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "961efd7dd8007983d2de6bb54784d3030fb11f2985461fc932304b5964fca66f"
+content-hash = "235536bf9cb790a24fe99a861e7f7725d2eb537ed59bd8735ecb865ba355b9a2"

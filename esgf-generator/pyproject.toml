@@ -10,7 +10,7 @@ python = "^3.12"
 polyfactory = "^2.16.2"
 httpx = "^0.27.0"
 click = "^8.1.7"
-esgf-playground-utils = "0.1.0"
+esgf-playground-utils = "^0.2.0"
 
 
 [tool.poetry.group.black.dependencies]
