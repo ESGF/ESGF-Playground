@@ -4,33 +4,35 @@ Models relating to Kakfa payloads for the ESGF-Playground.
 
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Literal, Union
 
 from pydantic import BaseModel
 from stac_pydantic.item import Item
 
 
-class Payload(BaseModel):
-    method: Literal["POST", "PUT", "PATCH", "DELETE"]
+class _Payload(BaseModel):
     collection_id: str
 
 
-class CreatePayload(BaseModel):
+class CreatePayload(_Payload):
+    method: Literal["POST"]
     item: Item
 
 
-class RevokePayload(BaseModel):
+class RevokePayload(_Payload):
+    method: Literal["PATCH", "DELETE"]
     item_id: str
 
 
-class UpdatePayload(BaseModel):
+class UpdatePayload(_Payload):
+    method: Literal["PUT", "PATCH"]
     item: Item
 
 
 class Data(BaseModel):
     type: Literal["STAC"]
     version: Literal["1.0.0"]
-    payload: Payload
+    payload: Union[CreatePayload, RevokePayload, UpdatePayload]
 
 
 class Auth(BaseModel):
