@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 import click
-from esgf_playgroud_utils.config.kafka import Settings
+from esgf_playground_utils.config.kafka import Settings
 
 from esgf_consumer import consume
 
