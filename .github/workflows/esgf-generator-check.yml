@@ -21,6 +21,7 @@ jobs:
           pipx install poetry
       - name: Run black
         run: |
+          cd esgf-generator
           poetry install --only black
           poetry run black ./ --verbose --check
       - name: Run mypy
