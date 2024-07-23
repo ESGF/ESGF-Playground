@@ -53,6 +53,17 @@ indent-width = 4
 docstring-code-format = true
 indent-style = "space"
 
+[tool.quality.mccabe]
+average = "A"
+block = "A"
+module = "A"
+
+[tool.bandit]
+skips = []
+
+[tool.quality.audit]
+ignore-code = ["CVE-2019-8341"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
