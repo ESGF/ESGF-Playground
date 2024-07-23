@@ -53,6 +53,5 @@ jobs:
         run: |
           cd esgf-generator
           poetry install --only xenon
-          read_toml_config () {poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['"$1"'])";}
-          poetry run xenon -a $(read_toml_config average) -b $(read_toml_config block) -m $(read_toml_config module) .
+          poetry run xenon -a $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['average'])") -b $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['block'])") -m $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['module'])") .
 
