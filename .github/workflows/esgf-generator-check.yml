@@ -16,49 +16,42 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Setup
+        run: |
+          pipx install poetry
       - name: Run black
         run: |
-          cd esgf-generator
-          pipx install poetry
           poetry install --only black
           poetry run black ./ --verbose --check
       - name: Run mypy
         run: |
           cd esgf-generator
-          pipx install poetry
-          poetry install
+          poetry install --with mypy
           poetry run mypy .
       - name: Run bandit
         run: |
           cd esgf-generator
-          pipx install poetry
           poetry install --only bandit
           poetry run bandit -c pyproject.toml -r . -s B311,B501
       - name: Run isort
         run: |
           cd esgf-generator
-          pipx install poetry
           poetry install --only isort
           poetry run isort . --check
       - name: Run ruff
         run: |
           cd esgf-generator
-          pipx install poetry
           poetry install --only ruff
           poetry run ruff check
       - name: Run audit
         run: |
           cd esgf-generator
-          pipx install poetry
           poetry self add poetry-audit-plugin
           poetry audit
       - name: Run xenon
         run: |
           cd esgf-generator
-          pipx install poetry
           poetry install --only xenon
-          poetry run xenon \ 
-            -a $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['average'])") \ 
-            -b $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['block'])") \ 
-            -m $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['module'])") .
+          read_toml_config () {poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['"$1"'])";}
+          poetry run xenon -a $(read_toml_config average) -b $(read_toml_config block) -m $(read_toml_config module) .
 
