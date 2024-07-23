@@ -57,4 +57,8 @@ jobs:
           cd esgf-generator
           pipx install poetry
           poetry install --only xenon
-          poetry run xenon . -a A -b B -m A
+          poetry run xenon \ 
+          -a $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['average'])") \ 
+          -b $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['block'])") \ 
+          -m $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['mccabe']['module'])") .
+

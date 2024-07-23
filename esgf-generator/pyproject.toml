@@ -57,6 +57,11 @@ indent-style = "space"
 [tool.poetry.scripts]
 esgf_generator = "esgf_generator.cli:esgf_generator"
 
+[tool.mccabe]
+average = "A"
+block = "A"
+module = "A"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
