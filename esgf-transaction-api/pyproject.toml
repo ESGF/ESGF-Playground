@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "esgf-api-ingest"
+name = "esgf-transaction-api"
 version = "0.1.0"
 description = ""
 authors = ["david.poulter <david.poulter@stfc.ac.uk>"]
