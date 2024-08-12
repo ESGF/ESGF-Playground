@@ -131,9 +131,9 @@ services:
         condition: service_healthy
 
   # Central ESGF Ingestion API Server
-  ingest_api:
+  transaction_api:
     build:
-      context: esgf-api-ingest
+      context: esgf-transaction-api
       dockerfile: Dockerfile
     environment:
       BOOTSTRAP_SERVERS : '["kafka1:19092"]'
