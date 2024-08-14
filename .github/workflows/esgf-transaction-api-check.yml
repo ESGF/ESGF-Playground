@@ -19,7 +19,6 @@ jobs:
       - name: Setup
         run: |
           pipx install poetry
-          python-version: "3.12"
       - name: Run black
         run: |
           cd esgf-transaction-api
