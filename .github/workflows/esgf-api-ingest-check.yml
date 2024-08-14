@@ -1,12 +1,12 @@
-name: esgf-api-ingest-check
+name: esgf-transaction-api-check
 
 on:
   push:
     paths:
-      - 'esgf-api-ingest/**'
+      - "esgf-transaction-api/**"
   pull_request:
     paths:
-      - 'esgf-api-ingest/**'
+      - "esgf-transaction-api/**"
 
 jobs:
   quality:
@@ -19,38 +19,39 @@ jobs:
       - name: Setup
         run: |
           pipx install poetry
+          python-version: "3.12"
       - name: Run black
         run: |
-          cd esgf-api-ingest
+          cd esgf-transaction-api
           poetry install --only black
           poetry run black ./ --verbose --check
       - name: Run mypy
         run: |
-          cd esgf-api-ingest
+          cd esgf-transaction-api
           poetry install
           poetry run mypy .
       - name: Run bandit
         run: |
-          cd esgf-api-ingest
+          cd esgf-transaction-api
           poetry install --only bandit
           poetry run bandit -c pyproject.toml -r .
       - name: Run isort
         run: |
-          cd esgf-api-ingest
+          cd esgf-transaction-api
           poetry install --only isort
           poetry run isort . --check
       - name: Run ruff
         run: |
-          cd esgf-api-ingest
+          cd esgf-transaction-api
           poetry install --only ruff
           poetry run ruff check
       - name: Run audit
         run: |
-          cd esgf-api-ingest
+          cd esgf-transaction-api
           poetry self add poetry-audit-plugin
           poetry audit $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); ignore_codes = data['tool']['quality']['audit']['ignore-code']; print('--ignore-code=' + ','.join(ignore_codes)) if ignore_codes else print('')")
       - name: Run xenon
         run: |
-          cd esgf-api-ingest
+          cd esgf-transaction-api
           poetry install --only xenon
           poetry run xenon -a $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['quality']['mccabe']['average'])") -b $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['quality']['mccabe']['block'])") -m $(poetry run python -c "import tomllib; f = open('pyproject.toml','rb') ; data =  tomllib.load(f); f.close(); print(data['tool']['quality']['mccabe']['module'])") .
