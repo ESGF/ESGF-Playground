@@ -1,7 +1,6 @@
 import random
-from typing import Literal
-
 import time
+from typing import Literal
 
 import click
 import httpx
