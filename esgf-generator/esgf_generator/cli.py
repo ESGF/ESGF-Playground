@@ -24,7 +24,9 @@ NODE_PORTS = {"east": 9050, "west": 9051}
     default=False,
     help="Add a random sub-second delay between publishing items to ESGF. Default: --no-delay",
 )
-def esgf_generator(count: int, node: Literal["east", "west"], publish: bool, delay: bool) -> None:
+def esgf_generator(
+    count: int, node: Literal["east", "west"], publish: bool, delay: bool
+) -> None:
     """
     Generate a number of ESGF items.
 
@@ -38,7 +40,9 @@ def esgf_generator(count: int, node: Literal["east", "west"], publish: bool, del
     )
     for instance in data:
         if publish:
-            click.echo(f"Sending {instance.properties.instance_id} to ESGF node '{node}'")
+            click.echo(
+                f"Sending {instance.properties.instance_id} to ESGF node '{node}'"
+            )
 
             with httpx.Client() as client:
                 result = client.post(
