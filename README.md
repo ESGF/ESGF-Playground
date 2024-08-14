@@ -8,10 +8,10 @@ This docker compose stac provides a full suite for simulating the ESGF publishin
 This docker compose stack provides a simulation of:
 
 - The central ESGF event stream (Kafka)
-- The central ESGF ingestion API 
-- A STAC based "Code Node" (simulating CEDA's ESGF STAC service)
+- A STAC based "East Node" (simulating CEDA's ESGF STAC service)
+- A STAC based "West Node" (simulating Globus's ESGF STAC service)
 - A STAC based "Secondary Node" (simulating an ESGF note interested only in the CMIP "historical" experiment)
-- A CLI for producing simulated CMIP and CORDEX data and sending it to the ingest API.
+- A CLI for producing simulated CMIP and CORDEX data and sending it to the ingest API of either node
 
 ## Configuration
 
@@ -60,13 +60,15 @@ Usage: esgf_generator [OPTIONS] COUNT
   COUNT is the number of items to generate.
 
 Options:
+  --node [east|west]
   --publish / --no-publish  Whether to publish items to ESGF, or just print to
                             the console (print happens anyway). Default: --no-
                             publish
   --delay / --no-delay      Add a random sub-second delay between publishing
                             items to ESGF. Default: --no-delay
   --help                    Show this message and exit.
-foo@bar:~$ poetry run esgf_generator 1 --no-publish 
+
+foo@bar:~$ poetry run esgf_generator 1 --no-publish --node east
 Producing 1 STAC records
 {
   "bbox": [
@@ -196,10 +198,11 @@ Done
 
 ## Further Work
 
-- [ ] Simulate a second "Core Node" (approximating Globus)
-- [ ] Provide an ingest API per simulated ESGF Core Node 
+- [*] Simulate a second "Core Node" (approximating Globus)
+- [*] Provide an ingest API per simulated ESGF Core Node 
 - [ ] Provide Update and Revoke functionality
-- [ ] Move to ESGF or CEDA repository
+- [ ] Provide replicate functionality
+- [*] Move to ESGF or CEDA repository
 - [ ] Publish images to docker hub (ESGF account)
 - [ ] Provide Helm charts
 - [ ] Fix loging on the ingest API
@@ -226,11 +229,11 @@ randomised CMIP6 / Cordex data:
 ```console
 foo@bar:~$ cd esgf-generator
 foo@bar:~$ poetry install
-foo@bar:~$ poetry run esgf_generator 1000 --publish 
+foo@bar:~$ poetry run esgf_generator 1000 --publish --node east
 ...(many STAC records printed)...
 ```
 
-After about 1 minute, Kafka will have balanced the newly generated topics. The **core** node should show 
+After about 1 minute, Kafka will have balanced the newly generated topics. The **East** and **West** nodes should show 
 1000 STAC records, and the **secondary** node should show ~200 records (only the `historical` experiment).
 
 ## Errors
@@ -248,7 +251,10 @@ This UI provides a complete view of the stage of your Kafka service and is descr
 
 ### STAC Browser
 
-A STAC browser simulating a **core** ESGF index is available at http://localhost:9011. This service should be listening 
+A STAC browser simulating the **East** ESGF index is available at http://localhost:9011. This service should be listening 
+to all the publication, retraction and update events in the Kafka queue.
+
+A STAC browser simulating the **West** ESGF index is available at http://localhost:9015. This service should be listening 
 to all the publication, retraction and update events in the Kafka queue.
 
 A STAC browser simulating a **secondary** ESGF index is also available at http://localhost:9013. This service is 
@@ -256,6 +262,8 @@ only listening to certain event in the Kafka queue.
 
 ### STAC OpenAPI Browser
 
-A STAC OpenAPI browser simulating a **core** ESGF index is available at http://localhost:9010.
+A STAC OpenAPI browser simulating the **East** ESGF index is available at http://localhost:9010.
+
+A STAC OpenAPI browser simulating the **West** ESGF index is available at http://localhost:9014.
 
 A STAC OpenAPI browser simulating a **secondary** ESGF index is available at http://localhost:9012.

@@ -1,4 +1,6 @@
 import random
+from typing import Literal
+
 import time
 
 import click
@@ -6,9 +8,12 @@ import httpx
 
 from esgf_generator import ESGFItemFactory
 
+NODE_PORTS = {"east": 9050, "west": 9051}
+
 
 @click.command()
 @click.argument("count", type=int)
+@click.option("--node", type=click.Choice(["east", "west"]))
 @click.option(
     "--publish/--no-publish",
     default=False,
@@ -19,7 +24,7 @@ from esgf_generator import ESGFItemFactory
     default=False,
     help="Add a random sub-second delay between publishing items to ESGF. Default: --no-delay",
 )
-def esgf_generator(count: int, publish: bool, delay: bool) -> None:
+def esgf_generator(count: int, node: Literal["east", "west"], publish: bool, delay: bool) -> None:
     """
     Generate a number of ESGF items.
 
@@ -33,11 +38,11 @@ def esgf_generator(count: int, publish: bool, delay: bool) -> None:
     )
     for instance in data:
         if publish:
-            click.echo(f"Sending {instance.properties.instance_id} to ESGF")
+            click.echo(f"Sending {instance.properties.instance_id} to ESGF node '{node}'")
 
             with httpx.Client() as client:
                 result = client.post(
-                    f"http://localhost:9050/{instance.collection}/items",
+                    f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
                     content=instance.model_dump_json(),
                 )
                 if result.status_code >= 300:
