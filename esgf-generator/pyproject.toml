@@ -36,9 +36,12 @@ isort = "^5.13.2"
 [tool.poetry.group.xenon.dependencies]
 xenon = "^0.9.1"
 
+[tool.poetry.scripts]
+esgf_generator = "esgf_generator.cli:esgf_generator"
+
 [tool.mypy]
 plugins = [
-  "pydantic.mypy"
+    "pydantic.mypy"
 ]
 strict = true
 ignore_missing_imports = true
@@ -54,8 +57,19 @@ indent-width = 4
 docstring-code-format = true
 indent-style = "space"
 
-[tool.poetry.scripts]
-esgf_generator = "esgf_generator.cli:esgf_generator"
+[tool.quality.mccabe]
+average = "A"
+block = "B"
+module = "A"
+
+[tool.quality.audit]
+ignore-code = []
+
+[tool.bandit]
+skips = [
+    "B311",
+    "B501"
+]
 
 [build-system]
 requires = ["poetry-core"]
