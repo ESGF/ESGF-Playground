@@ -1,13 +1,13 @@
 version: '3.9'
 
 services:
-  # Core ESGF Node FastAPI Server
-  app-elasticsearch-core:
-    container_name: stac-fastapi-es-core
+  # ESGF East Node FastAPI Server
+  app-elasticsearch-east:
+    container_name: stac-fastapi-es-east
     image: ghcr.io/djspstfc/stac-fastapi-es:1.0
     restart: always
     environment:
-      - STAC_FASTAPI_TITLE=Simulated ESGF Core Index STAC interface
+      - STAC_FASTAPI_TITLE=Simulated ESGF East Node Index STAC interface
       - STAC_FASTAPI_DESCRIPTION=A STAC FastAPI with an Elasticsearch backend
       - STAC_FASTAPI_VERSION=2.1
       - APP_HOST=0.0.0.0
@@ -15,7 +15,7 @@ services:
       - RELOAD=true
       - ENVIRONMENT=local
       - WEB_CONCURRENCY=10
-      - ES_HOST=elasticsearch-core
+      - ES_HOST=elasticsearch-east
       - ES_PORT=9200
       - ES_USE_SSL=false
       - ES_VERIFY_CERTS=false
@@ -23,17 +23,17 @@ services:
     ports:
       - "9010:8080"
     volumes:
-      - ./esdata-core:/usr/share/elasticsearch/data
+      - ./esdata-east:/usr/share/elasticsearch/data
     depends_on:
-      - elasticsearch-core
+      - elasticsearch-east
     command:
-      bash -c "./scripts/wait-for-it-es.sh es-container-core:9200 && python -m stac_fastapi.elasticsearch.app"
+      bash -c "./scripts/wait-for-it-es.sh es-container-east:9200 && python -m stac_fastapi.elasticsearch.app"
 
-  # Core ESGF Node ElasticSearch Server
-  elasticsearch-core:
-    container_name: es-container-core
+  # ESGF East Node ElasticSearch Server
+  elasticsearch-east:
+    container_name: es-container-east
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
-    hostname: elasticsearch-core
+    hostname: elasticsearch-east
     environment:
       ES_JAVA_OPTS: -Xms512m -Xmx1g
     volumes:
@@ -41,26 +41,90 @@ services:
     ports:
       - "9200:9200"
 
-  # Core ESGF Node STAC Browser
-  stac-browser-core:
-    container_name: stac-browser-core
+  # ESGF East Node STAC Browser
+  stac-browser-east:
+    container_name: stac-browser-east
     image: esgfdeploy/stac-browser:v1
     environment:
       SB_catalogUrl: http://localhost:9010/
     ports:
       - "9011:8080"
     depends_on:
-      - app-elasticsearch-core
+      - app-elasticsearch-east
 
-  # Core ESGF Node KAFKA Consumer
-  stac-consumer-core: # TODO build this
+  # ESGF East Node KAFKA Consumer
+  stac-consumer-east: # TODO build this
     build:
       context: esgf-consumer
       dockerfile: Dockerfile
     environment:
       CONSUMER_GROUP: "esgf-east"
       BOOTSTRAP_SERVERS: '["kafka1:19092"]'
-      STAC_SERVER: "http://app-elasticsearch-core:8080"
+      STAC_SERVER: "http://app-elasticsearch-east:8080"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+
+  # ESGF West Node FastAPI Server
+  app-elasticsearch-west:
+    container_name: stac-fastapi-es-west
+    image: ghcr.io/djspstfc/stac-fastapi-es:1.0
+    restart: always
+    environment:
+      - STAC_FASTAPI_TITLE=Simulated ESGF West Node Index STAC interface
+      - STAC_FASTAPI_DESCRIPTION=A STAC FastAPI with an Elasticsearch backend
+      - STAC_FASTAPI_VERSION=2.1
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8080
+      - RELOAD=true
+      - ENVIRONMENT=local
+      - WEB_CONCURRENCY=10
+      - ES_HOST=elasticsearch-west
+      - ES_PORT=9200
+      - ES_USE_SSL=false
+      - ES_VERIFY_CERTS=false
+      - BACKEND=elasticsearch
+    ports:
+      - "9014:8080"
+    volumes:
+      - ./esdata-west:/usr/share/elasticsearch/data
+    depends_on:
+      - elasticsearch-west
+    command:
+      bash -c "./scripts/wait-for-it-es.sh es-container-west:9200 && python -m stac_fastapi.elasticsearch.app"
+
+  # ESGF West Node ElasticSearch Server
+  elasticsearch-west:
+    container_name: es-container-west
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
+    hostname: elasticsearch-west
+    environment:
+      ES_JAVA_OPTS: -Xms512m -Xmx1g
+    volumes:
+      - ./elasticsearch/config/elasticsearch-core.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    ports:
+      - "9202:9200"
+
+  # ESGF West Node STAC Browser
+  stac-browser-west:
+    container_name: stac-browser-west
+    image: esgfdeploy/stac-browser:v1
+    environment:
+      SB_catalogUrl: http://localhost:9014/
+    ports:
+      - "9015:8080"
+    depends_on:
+      - app-elasticsearch-west
+
+  # ESGF East West KAFKA Consumer
+  stac-consumer-west: # TODO build this
+    build:
+      context: esgf-consumer
+      dockerfile: Dockerfile
+    environment:
+      CONSUMER_GROUP: "esgf-west"
+      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
+      STAC_SERVER: "http://app-elasticsearch-west:8080"
     depends_on:
       kafka1:
         condition: service_healthy
@@ -89,7 +153,7 @@ services:
     volumes:
       - ./esdata-secondary:/usr/share/elasticsearch/data
     depends_on:
-      - elasticsearch-core
+      - elasticsearch-secondary
     command:
       bash -c "./scripts/wait-for-it-es.sh es-container-secondary:9200 && python -m stac_fastapi.elasticsearch.app"
 
@@ -130,8 +194,8 @@ services:
       kafka1:
         condition: service_healthy
 
-  # Central ESGF Ingestion API Server
-  transaction_api:
+  # ESGF East Ingestion API Server
+  transaction_api_east:
     build:
       context: esgf-transaction-api
       dockerfile: Dockerfile
@@ -139,6 +203,19 @@ services:
       BOOTSTRAP_SERVERS : '["kafka1:19092"]'
     ports:
       - "9050:8000"
+    depends_on:
+      kafka1:
+        condition: service_healthy
+
+  # ESGF West Ingestion API Server
+  transaction_api_west:
+    build:
+      context: esgf-transaction-api
+      dockerfile: Dockerfile
+    environment:
+      BOOTSTRAP_SERVERS : '["kafka1:19092"]'
+    ports:
+      - "9051:8000"
     depends_on:
       kafka1:
         condition: service_healthy
