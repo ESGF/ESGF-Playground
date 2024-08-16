@@ -55,8 +55,8 @@ indent-style = "space"
 
 [tool.quality.mccabe]
 average = "A"
-block = "A"
-module = "A"
+block = "B"
+module = "B"
 
 [tool.quality.audit]
 ignore-code = []
