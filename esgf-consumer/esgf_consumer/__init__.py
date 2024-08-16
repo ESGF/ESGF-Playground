@@ -57,35 +57,7 @@ async def consume(settings: Settings) -> None:
                     logger.critical("Received message: %s", msg)
                     event = KafkaEvent.model_validate_json(msg.value.decode("utf-8"))
 
-                    await ensure_collection(
-                        settings.stac_server, event.data.payload.collection_id, client
-                    )
-                    logger.critical(
-                        "Collection %s confirmed on %s",
-                        event.data.payload.collection_id,
-                        settings.stac_server,
-                    )
-
-                    match event.data.payload:
-                        case CreatePayload():
-                            await create_item(
-                                event.data.payload.collection_id,
-                                event.data.payload.item,
-                                settings,
-                                client,
-                            )
-                            logger.critical(
-                                "Item %s created.", event.data.payload.item.id
-                            )
-
-                        case UpdatePayload():
-                            raise ESGFConsumerNotImplementedPayloadError
-
-                        case RevokePayload():
-                            raise ESGFConsumerNotImplementedPayloadError
-
-                        case _:
-                            raise ESGFConsumerUnknownPayloadError
+                    await _handle_message(client, event, settings)
 
                 except ESGFConsumerUnknownPayloadError:
                     logger.exception("Received a valid but unknown payload")
@@ -157,6 +129,37 @@ async def consume(settings: Settings) -> None:
             logger.critical("Producer stopped.")
 
     return None
+
+
+async def _handle_message(
+    client: httpx.AsyncClient, event: KafkaEvent, settings: Settings
+) -> None:
+    await ensure_collection(
+        settings.stac_server, event.data.payload.collection_id, client
+    )
+    logger.critical(
+        "Collection %s confirmed on %s",
+        event.data.payload.collection_id,
+        settings.stac_server,
+    )
+    match event.data.payload:
+        case CreatePayload():
+            await create_item(
+                event.data.payload.collection_id,
+                event.data.payload.item,
+                settings,
+                client,
+            )
+            logger.critical("Item %s created.", event.data.payload.item.id)
+
+        case UpdatePayload():
+            raise ESGFConsumerNotImplementedPayloadError
+
+        case RevokePayload():
+            raise ESGFConsumerNotImplementedPayloadError
+
+        case _:
+            raise ESGFConsumerUnknownPayloadError
 
 
 if __name__ == "__main__":
