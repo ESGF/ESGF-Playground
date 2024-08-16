@@ -236,6 +236,27 @@ foo@bar:~$ poetry run esgf_generator 1000 --publish --node east
 After about 1 minute, Kafka will have balanced the newly generated topics. The **East** and **West** nodes should show 
 1000 STAC records, and the **secondary** node should show ~200 records (only the `historical` experiment).
 
+## Development
+
+It is important to realise that this repo contains three independent Python projects. You should intialise poetry for all three 
+of these:
+
+```console
+foo@bar:~$ cd esgf-generator
+foo@bar:~$ poetry install
+foo@bar:~$ cd ../esgf-consumer
+foo@bar:~$ poetry install
+foo@bar:~$ cd ../esgf-transaction-api
+foo@bar:~$ poetry install
+```
+
+Poetry will ensure that the correct underlying virtual environment is used for which ever direcrtory you are working in. If 
+you are using an IDE, it would be beneficial to set up three different interpreters, for example with PyCharm:
+
+https://www.jetbrains.com/help/pycharm/configuring-python-interpreter.html#i5ghoy0_355
+
+You can typically create as many interpreters as you wish.
+
 ## Errors
 
 Any errors produced by the consumers are passed back into a special topic in kafka called `esgf_error`. They 
