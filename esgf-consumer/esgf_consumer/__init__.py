@@ -8,8 +8,20 @@ import traceback
 
 import httpx
 from aiokafka.errors import KafkaError
+
+from esgf_consumer.exceptions import (
+    ESGFConsumerNotImplementedPayloadError,
+    ESGFConsumerUnknownPayloadError,
+)
 from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utils.models.kafka import Error, ErrorType, KafkaEvent
+from esgf_playground_utils.models.kafka import (
+    Error,
+    ErrorType,
+    KafkaEvent,
+    CreatePayload,
+    UpdatePayload,
+    RevokePayload,
+)
 from pydantic import ValidationError
 
 from esgf_consumer.collection import ensure_collection
@@ -54,13 +66,53 @@ async def consume(settings: Settings) -> None:
                         event.data.payload.collection_id,
                         settings.stac_server,
                     )
-                    await create_item(
-                        event.data.payload.collection_id,
-                        event.data.payload.item,
-                        settings,
-                        client,
+
+                    match event.data.payload:
+                        case CreatePayload():
+                            await create_item(
+                                event.data.payload.collection_id,
+                                event.data.payload.item,
+                                settings,
+                                client,
+                            )
+                            logger.critical(
+                                "Item %s created.", event.data.payload.item.id
+                            )
+
+                        case UpdatePayload():
+                            raise ESGFConsumerNotImplementedPayloadError
+
+                        case RevokePayload():
+                            raise ESGFConsumerNotImplementedPayloadError
+
+                        case _:
+                            raise ESGFConsumerUnknownPayloadError
+
+                except ESGFConsumerUnknownPayloadError:
+                    logger.exception("Received a valid but unknown payload")
+                    error = Error(
+                        original_payload=event.model_dump_json(),
+                        node=settings.consumer_group,
+                        traceback=traceback.format_exc(),
+                        error_type=ErrorType.payload,
                     )
-                    logger.critical("Item %s created.", event.data.payload.item.id)
+                    await producer.send_and_wait(
+                        "esgf_error", error.model_dump_json().encode()
+                    )
+
+                except ESGFConsumerNotImplementedPayloadError:
+                    logger.exception(
+                        "Received a valid payload that cannot yet be actioned"
+                    )
+                    error = Error(
+                        original_payload=event.model_dump_json(),
+                        node=settings.consumer_group,
+                        traceback=traceback.format_exc(),
+                        error_type=ErrorType.payload,
+                    )
+                    await producer.send_and_wait(
+                        "esgf_error", error.model_dump_json().encode()
+                    )
 
                 except httpx.HTTPError:
                     logger.exception("Http exception occurred")
