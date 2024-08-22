@@ -94,44 +94,48 @@ async def create_item(
     return item
 
 
-# @app.delete("/{collection_id}/items/{item_id}")
-# async def delete_item(item_id: str, collection_id: str) -> None:
-#     """Add DELETE message to kafka event stream.
-#
-#     Args:
-#         item_id (str): The identifier of the item to delete.
-#         collection_id (str): The identifier of the collection that contains the item.
-#
-#     Returns:
-#         Optional[stac_types.Item]: The deleted item, or `None` if the item was successfully deleted.
-#     """
-#     message = ReferenceMessage(
-#         type="remove", collection_id=collection_id, item_id=item_id
-#     )
-#     await post_message(message=message)
-#
-#
-# @app.put("/{collection_id}/items/{item_id}")
-# async def update_item(collection_id: str, item_id: str, item: dict) -> None:
-#     """Add UPDATE message to kafka event stream.
-#
-#     Args:
-#         collection_id (str): The ID of the collection the item belongs to.
-#         item_id (str): The ID of the item to be updated.
-#         item (stac_types.Item): The new item data.
-#         kwargs: Other optional arguments, including the request object.
-#
-#     Returns:
-#         stac_types.Item: The updated item object.
-#
-#     Raises:
-#         NotFound: If the specified collection is not found in the database.
-#
-#     """
-#     message = {
-#         "type": "update",
-#         "collection_id": collection_id,
-#         "item_id": item_id,
-#         "item": item,
-#     }
-#     await post_message(message=message)
+@app.delete("/{collection_id}/items/{item_id}")
+async def delete_item(item_id: str, collection_id: str) -> None:
+    """Add DELETE message to kafka event stream.
+
+    Args:
+        item_id (str): The identifier of the item to delete.
+        collection_id (str): The identifier of the collection that contains the item.
+
+    Returns:
+        Optional[stac_types.Item]: The deleted item, or `None` if the item was successfully deleted.
+    """
+
+    message = {
+        "type": "update",
+        "collection_id": collection_id,
+        "item_id": item_id,
+        }
+
+    await post_message(message=message)
+
+
+@app.put("/{collection_id}/items/{item_id}")
+async def update_item(collection_id: str, item_id: str, item: dict) -> None:
+    """Add UPDATE message to kafka event stream.
+
+    Args:
+        collection_id (str): The ID of the collection the item belongs to.
+        item_id (str): The ID of the item to be updated.
+        item (stac_types.Item): The new item data.
+        kwargs: Other optional arguments, including the request object.
+
+    Returns:
+        stac_types.Item: The updated item object.
+
+    Raises:
+        NotFound: If the specified collection is not found in the database.
+
+    """
+    message = {
+        "type": "update",
+        "collection_id": collection_id,
+        "item_id": item_id,
+        "item": item,
+    }
+    await post_message(message=message)

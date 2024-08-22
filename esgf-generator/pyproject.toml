@@ -38,6 +38,8 @@ xenon = "^0.9.1"
 
 [tool.poetry.scripts]
 esgf_generator = "esgf_generator.cli:esgf_generator"
+esgf_update = "esgf_generator.cli:esgf_update"
+esgf_delete = "esgf_generator.cli:esgf_delete"
 
 [tool.mypy]
 plugins = [

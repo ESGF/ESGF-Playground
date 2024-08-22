@@ -4,6 +4,7 @@ from typing import Literal
 
 import click
 import httpx
+import json
 
 from esgf_generator import ESGFItemFactory
 
@@ -32,6 +33,7 @@ def esgf_generator(
     COUNT is the number of items to generate.
     """
     click.echo(f"Producing {count} STAC records")
+    click.echo()
 
     data = ESGFItemFactory().batch(
         count,
@@ -60,3 +62,65 @@ def esgf_generator(
         click.echo()
 
     click.echo("Done")
+
+
+@click.command()
+@click.argument("collection_id", type=str)
+@click.argument("item_id", type=str)
+@click.option("--node", type=click.Choice(["east", "west"]))
+@click.option(
+    "--publish/--no-publish",
+    default=False,
+    help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
+)
+def esgf_update(collection_id: str, item_id: str, publish: bool,  node: Literal["east", "west"]) -> None:
+    """
+    Update an ESGF item.
+
+    COLLECTION_ID is the identifier of the collection that contains the item.
+    ITEM_ID is the identifier of the item to update.
+    """
+    click.echo(f"Updating item {item_id} in collection {collection_id}")
+
+    with httpx.Client() as client:
+        data = {"data": { "payload": { "item": { "collection": "Test" }}}}
+        result = client.put(
+            f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+            content=json.dumps(data),
+        )
+        if result.status_code >= 300:
+            raise Exception(result.content)
+
+    click.echo("Done")
+
+
+@click.command()
+@click.argument("collection_id", type=str)
+@click.argument("item_id", type=str)
+@click.option("--node", type=click.Choice(["east", "west"]))
+@click.option(
+    "--publish/--no-publish",
+    default=False,
+    help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
+)
+def esgf_delete(collection_id: str, item_id: str, publish: bool,  node: Literal["east", "west"]) -> None:
+    """
+    Delete an ESGF item.
+
+    COLLECTION_ID is the identifier of the collection that contains the item.
+    ITEM_ID is the identifier of the item to update.
+    """
+    click.echo(f"Deleting item {item_id} in collection {collection_id}")
+    click.echo()
+
+
+    with httpx.Client() as client:
+        result = client.delete(
+            f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}")
+
+        if result.status_code >= 300:
+            raise Exception(result.content)
+
+    click.echo("Done")
+
+
