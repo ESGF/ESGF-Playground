@@ -4,11 +4,33 @@ from typing import Literal
 
 import click
 import httpx
-import json
 
 from esgf_generator import ESGFItemFactory
 
 NODE_PORTS = {"east": 9050, "west": 9051}
+
+
+def update_topic(item, item_id, collection_id):
+    item.id = item_id
+    item.collection = collection_id
+    item.properties.instance_id = item_id
+    item.properties.title = item.id 
+
+    split_item = item_id.split('.')
+    if len(split_item) != 10:
+        raise ValueError("Error with item naming format")
+
+    (item.properties.mip_era,
+     item.properties.activity_id,
+     item.properties.institution_id,
+     item.properties.source_id,
+     item.properties.experiment_id,
+     item.properties.variant_label,
+     item.properties.table_id,
+     item.properties.variable_id,
+     item.properties.grid_label) = split_item[:9]
+
+    return item
 
 
 @click.command()
@@ -80,17 +102,28 @@ def esgf_update(collection_id: str, item_id: str, publish: bool,  node: Literal[
     COLLECTION_ID is the identifier of the collection that contains the item.
     ITEM_ID is the identifier of the item to update.
     """
-    click.echo(f"Updating item {item_id} in collection {collection_id}")
 
-    with httpx.Client() as client:
-        data = {"data": { "payload": { "item": { "collection": "Test" }}}}
-        result = client.put(
+    data = ESGFItemFactory().batch(
+        1,
+        stac_extensions=[],
+    )
+
+    item = data[0]
+
+    item = update_topic(item, item_id, collection_id)
+
+    if publish:
+        click.echo(f"Updating item {item_id} in collection {collection_id}")
+        click.echo()
+        with httpx.Client() as client:
+            result = client.put(
             f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-            content=json.dumps(data),
-        )
-        if result.status_code >= 300:
-            raise Exception(result.content)
+            content=item.model_dump_json(),
+            )
+            if result.status_code >= 300:
+                raise Exception(result.content)
 
+    click.echo()
     click.echo("Done")
 
 
@@ -99,11 +132,16 @@ def esgf_update(collection_id: str, item_id: str, publish: bool,  node: Literal[
 @click.argument("item_id", type=str)
 @click.option("--node", type=click.Choice(["east", "west"]))
 @click.option(
+    "--hard/--soft",
+    default=False,
+    help="Whether to permanently delete item or note that its deleted. Default: --soft",
+)
+@click.option(
     "--publish/--no-publish",
     default=False,
     help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
 )
-def esgf_delete(collection_id: str, item_id: str, publish: bool,  node: Literal["east", "west"]) -> None:
+def esgf_delete(collection_id: str, item_id: str, hard: bool, publish: bool,  node: Literal["east", "west"]) -> None:
     """
     Delete an ESGF item.
 
@@ -113,14 +151,17 @@ def esgf_delete(collection_id: str, item_id: str, publish: bool,  node: Literal[
     click.echo(f"Deleting item {item_id} in collection {collection_id}")
     click.echo()
 
-
+    
     with httpx.Client() as client:
-        result = client.delete(
-            f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}")
-
+        if hard:
+            result = client.delete(
+                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}")
+        else: 
+            result = client.patch(
+                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                content={"retracted": True})
         if result.status_code >= 300:
             raise Exception(result.content)
 
     click.echo("Done")
-
 

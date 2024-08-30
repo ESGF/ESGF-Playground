@@ -25,7 +25,7 @@ from esgf_consumer.exceptions import (
     ESGFConsumerNotImplementedPayloadError,
     ESGFConsumerUnknownPayloadError,
 )
-from esgf_consumer.items import create_item, update_item, revoke_item
+from esgf_consumer.items import create_item, update_item, soft_delete_item, hard_delete_item
 from esgf_consumer.producers import get_producer
 
 logging.getLogger().setLevel(logging.DEBUG)
@@ -156,19 +156,29 @@ async def _handle_message(
             await update_item(
                 event.data.payload.collection_id,
                 event.data.payload.item,
+                event.data.payload.item.id,
                 settings,
                 client,
             )
             logger.critical("Item %s updated.", event.data.payload.item.id)
 
-        case RevokePayload():
-            await revoke_item(
+        case RevokePayload(method="DELETE"):
+            await hard_delete_item(
                 event.data.payload.collection_id,
-                event.data.payload.item,
+                event.data.payload.item_id,
                 settings,
                 client,
             )
-            logger.critical("Item %s deleted.", event.data.payload.item.id)
+            logger.critical("Item %s deleted.", event.data.payload.item_id)
+
+        case RevokePayload(method="PATCH"):
+            await soft_delete_item(
+                event.data.payload.collection_id,
+                event.data.payload.item_id,
+                settings,
+                client,
+            )
+            logger.critical("Item %s deleted.", event.data.payload.item_id)
 
         case _:
             raise ESGFConsumerUnknownPayloadError
