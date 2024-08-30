@@ -10,7 +10,9 @@ from esgf_generator import ESGFItemFactory
 NODE_PORTS = {"east": 9050, "west": 9051}
 
 
-def update_topic(item, item_id, collection_id) -> ESGFItemFactory:
+def update_topic(
+    item: ESGFItemFactory, item_id: str, collection_id: str
+) -> ESGFItemFactory:
     item.id = item_id
     item.collection = collection_id
     item.properties.instance_id = item_id
