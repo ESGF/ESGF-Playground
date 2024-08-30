@@ -4,8 +4,9 @@ from typing import Literal
 
 import click
 import httpx
-from esgf_generator import ESGFItemFactory
 from esgf_playground_utils.models.item import ESGFItem
+
+from esgf_generator import ESGFItemFactory
 
 NODE_PORTS = {"east": 9050, "west": 9051}
 
