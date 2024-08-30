@@ -5,14 +5,12 @@ from typing import Literal
 import click
 import httpx
 
-from esgf_generator import ESGFItemFactory
+from esgf_generator import ESGFItemFactory, ESGFItem
 
 NODE_PORTS = {"east": 9050, "west": 9051}
 
 
-def update_topic(
-    item: ESGFItemFactory, item_id: str, collection_id: str
-) -> ESGFItemFactory:
+def update_topic(item: ESGFItem, item_id: str, collection_id: str) -> ESGFItemFactory:
     item.id = item_id
     item.collection = collection_id
     item.properties.instance_id = item_id
