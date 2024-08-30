@@ -8,15 +8,6 @@ import traceback
 
 import httpx
 from aiokafka.errors import KafkaError
-from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utils.models.kafka import (
-    CreatePayload,
-    Error,
-    ErrorType,
-    KafkaEvent,
-    RevokePayload,
-    UpdatePayload,
-)
 from pydantic import ValidationError
 
 from esgf_consumer.collection import ensure_collection
@@ -27,11 +18,19 @@ from esgf_consumer.exceptions import (
 )
 from esgf_consumer.items import (
     create_item,
-    update_item,
-    # soft_delete_item,
     hard_delete_item,
+    update_item,
 )
 from esgf_consumer.producers import get_producer
+from esgf_playground_utils.config.kafka import Settings
+from esgf_playground_utils.models.kafka import (
+    CreatePayload,
+    Error,
+    ErrorType,
+    KafkaEvent,
+    RevokePayload,
+    UpdatePayload,
+)
 
 logging.getLogger().setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
