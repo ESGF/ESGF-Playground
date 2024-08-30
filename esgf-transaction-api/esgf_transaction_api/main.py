@@ -6,16 +6,10 @@ from typing import Any, AsyncGenerator, Optional, Union
 
 import aiokafka
 from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utils.models.kafka import (
-    Auth,
-    CreatePayload,
-    UpdatePayload,
-    RevokePayload,
-    Data,
-    KafkaEvent,
-    Metadata,
-    Publisher,
-)
+from esgf_playground_utils.models.kafka import (Auth, CreatePayload, Data,
+                                                KafkaEvent, Metadata,
+                                                Publisher, RevokePayload,
+                                                UpdatePayload)
 from fastapi import FastAPI, HTTPException, Request
 from stac_pydantic.item import Item
 from stac_pydantic.item_collection import ItemCollection
