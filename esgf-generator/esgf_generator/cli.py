@@ -166,11 +166,12 @@ def esgf_delete(
             result = client.delete(
                 f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
             )
-        else:
-            result = client.patch(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                content={"retracted": True},
-            )
+        # Not Yet Implemented
+        # else:
+        #     result = client.patch(
+        #         f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+        #         content={"retracted": True},
+        #     )
         if result.status_code >= 300:
             raise Exception(result.content)
 

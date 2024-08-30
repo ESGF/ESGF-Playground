@@ -176,14 +176,15 @@ async def _handle_message(
             )
             logger.critical("Item %s deleted.", event.data.payload.item_id)
 
-        case RevokePayload(method="PATCH"):
-            await soft_delete_item(
-                event.data.payload.collection_id,
-                event.data.payload.item_id,
-                settings,
-                client,
-            )
-            logger.critical("Item %s deleted.", event.data.payload.item_id)
+        # Not Yet Implemented
+        # case RevokePayload(method="PATCH"):
+        #     await soft_delete_item(
+        #         event.data.payload.collection_id,
+        #         event.data.payload.item_id,
+        #         settings,
+        #         client,
+        #     )
+        #     logger.critical("Item %s deleted.", event.data.payload.item_id)
 
         case _:
             raise ESGFConsumerUnknownPayloadError
