@@ -28,7 +28,7 @@ from esgf_consumer.exceptions import (
 from esgf_consumer.items import (
     create_item,
     update_item,
-    soft_delete_item,
+    # soft_delete_item,
     hard_delete_item,
 )
 from esgf_consumer.producers import get_producer

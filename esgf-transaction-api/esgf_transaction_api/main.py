@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
 app = FastAPI(lifespan=lifespan)
 
 
-def item_body(payload):
+def item_body(payload) -> KafkaEvent:
     data = Data(type="STAC", version="1.0.0", payload=payload)
     auth = Auth(client_id="esgf-generator", server="docker-compose-local")
     publisher = Publisher(package="esgf-generator", version="0.1.0")
@@ -158,7 +158,9 @@ async def create_item(
 
 
 @app.put("/{collection_id}/items/{item_id}")
-async def update_item(collection_id: str, item_id: str, item: Item):
+async def update_item(
+    collection_id: str, item_id: str, item: Union[Item, ItemCollection]
+) -> Union[Item, ItemCollection]:
     """Add UPDATE message to kafka event stream.
 
     Args:
