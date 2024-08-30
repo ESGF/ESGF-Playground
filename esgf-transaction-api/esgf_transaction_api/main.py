@@ -23,15 +23,14 @@ from stac_pydantic.item_collection import ItemCollection
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 stream_handler = logging.StreamHandler(sys.stdout)
-log_formatter = logging.Formatter(
-    "[%(levelname)s] %(name)s: %(message)s"
-)
+log_formatter = logging.Formatter("[%(levelname)s] %(name)s: %(message)s")
 stream_handler.setFormatter(log_formatter)
 logger.addHandler(stream_handler)
 
 
 settings = Settings()
 producer: Optional[aiokafka.AIOKafkaProducer] = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
@@ -59,6 +58,7 @@ def item_body(payload):
 
     return event
 
+
 def get_topic(item: Item) -> str:
     mip_era = getattr(item.properties, "mip_era")
     experiment = getattr(item.properties, "experiment_id")
@@ -68,13 +68,13 @@ def get_topic(item: Item) -> str:
 
 
 def get_topic_alternate(item_id: str) -> str:
-    parts = item_id.split('.')
-    mip_era = parts[0]  
+    parts = item_id.split(".")
+    mip_era = parts[0]
     experiment = parts[4]
     source_id = parts[3]
-    
+
     return f"{mip_era}.{experiment}.{source_id}"
-    
+
 
 async def post_message(event: KafkaEvent) -> None:
     try:
@@ -97,7 +97,7 @@ async def delete_message(event: KafkaEvent) -> None:
         if producer is None:
             raise Exception("Kafka producer is not initialized")
 
-        await producer.send_and_wait(topic, value)    
+        await producer.send_and_wait(topic, value)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=repr(exc)) from exc
 
@@ -109,19 +109,25 @@ async def post_item(collection_id: str, item: Item) -> None:
 
 
 async def modify_item(collection_id: str, item: Item, item_id: str) -> None:
-    payload = UpdatePayload(method="PUT", collection_id=collection_id, item=item, item_id=item_id)
+    payload = UpdatePayload(
+        method="PUT", collection_id=collection_id, item=item, item_id=item_id
+    )
     event = item_body(payload)
     await post_message(event)
 
 
 async def revoke_item_soft(collection_id: str, item_id: str) -> None:
-    payload = RevokePayload(method="PATCH", collection_id=collection_id, item_id=item_id)
+    payload = RevokePayload(
+        method="PATCH", collection_id=collection_id, item_id=item_id
+    )
     event = item_body(payload)
     await post_message(event)
 
 
 async def revoke_item_hard(collection_id: str, item_id: str) -> None:
-    payload = RevokePayload(method="DELETE", collection_id=collection_id, item_id=item_id)
+    payload = RevokePayload(
+        method="DELETE", collection_id=collection_id, item_id=item_id
+    )
     event = item_body(payload)
     await delete_message(event)
 
@@ -168,7 +174,7 @@ async def update_item(collection_id: str, item_id: str, item: Item):
 
     """
     logger.info("Updating %s item", collection_id)
-    
+
     await modify_item(collection_id, item, item_id)
 
     return item
@@ -186,10 +192,7 @@ async def delete_item(item_id: str, collection_id: str, request: Request) -> Non
         Optional[stac_types.Item]: The deleted item, or `None` if the item was successfully deleted.
     """
     logger.info("Deleting %s item", collection_id)
-    if request.method == 'DELETE':
+    if request.method == "DELETE":
         await revoke_item_hard(collection_id, item_id)
     else:
         await revoke_item_soft(collection_id, item_id)
-
-
-

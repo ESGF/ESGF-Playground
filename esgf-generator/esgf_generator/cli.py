@@ -14,21 +14,23 @@ def update_topic(item, item_id, collection_id):
     item.id = item_id
     item.collection = collection_id
     item.properties.instance_id = item_id
-    item.properties.title = item.id 
+    item.properties.title = item.id
 
-    split_item = item_id.split('.')
+    split_item = item_id.split(".")
     if len(split_item) != 10:
         raise ValueError("Error with item naming format")
 
-    (item.properties.mip_era,
-     item.properties.activity_id,
-     item.properties.institution_id,
-     item.properties.source_id,
-     item.properties.experiment_id,
-     item.properties.variant_label,
-     item.properties.table_id,
-     item.properties.variable_id,
-     item.properties.grid_label) = split_item[:9]
+    (
+        item.properties.mip_era,
+        item.properties.activity_id,
+        item.properties.institution_id,
+        item.properties.source_id,
+        item.properties.experiment_id,
+        item.properties.variant_label,
+        item.properties.table_id,
+        item.properties.variable_id,
+        item.properties.grid_label,
+    ) = split_item[:9]
 
     return item
 
@@ -95,7 +97,9 @@ def esgf_generator(
     default=False,
     help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
 )
-def esgf_update(collection_id: str, item_id: str, publish: bool,  node: Literal["east", "west"]) -> None:
+def esgf_update(
+    collection_id: str, item_id: str, publish: bool, node: Literal["east", "west"]
+) -> None:
     """
     Update an ESGF item.
 
@@ -117,8 +121,8 @@ def esgf_update(collection_id: str, item_id: str, publish: bool,  node: Literal[
         click.echo()
         with httpx.Client() as client:
             result = client.put(
-            f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-            content=item.model_dump_json(),
+                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                content=item.model_dump_json(),
             )
             if result.status_code >= 300:
                 raise Exception(result.content)
@@ -141,7 +145,13 @@ def esgf_update(collection_id: str, item_id: str, publish: bool,  node: Literal[
     default=False,
     help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
 )
-def esgf_delete(collection_id: str, item_id: str, hard: bool, publish: bool,  node: Literal["east", "west"]) -> None:
+def esgf_delete(
+    collection_id: str,
+    item_id: str,
+    hard: bool,
+    publish: bool,
+    node: Literal["east", "west"],
+) -> None:
     """
     Delete an ESGF item.
 
@@ -151,17 +161,17 @@ def esgf_delete(collection_id: str, item_id: str, hard: bool, publish: bool,  no
     click.echo(f"Deleting item {item_id} in collection {collection_id}")
     click.echo()
 
-    
     with httpx.Client() as client:
         if hard:
             result = client.delete(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}")
-        else: 
+                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
+            )
+        else:
             result = client.patch(
                 f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                content={"retracted": True})
+                content={"retracted": True},
+            )
         if result.status_code >= 300:
             raise Exception(result.content)
 
     click.echo("Done")
-

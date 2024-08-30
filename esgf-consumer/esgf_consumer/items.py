@@ -25,7 +25,11 @@ async def create_item(
 
 
 async def update_item(
-    collection_id: str, item: Item, item_id: str, settings: Settings, client: httpx.AsyncClient
+    collection_id: str,
+    item: Item,
+    item_id: str,
+    settings: Settings,
+    client: httpx.AsyncClient,
 ) -> None:
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
@@ -37,19 +41,22 @@ async def update_item(
 
     else:
         logger.critical("Item not updated: %s", result.content)
-        
+
     return None
 
 
-
 async def soft_delete_item(
-    collection_id: str, item: Item, item_id: str, settings: Settings, client: httpx.AsyncClient
+    collection_id: str,
+    item: Item,
+    item_id: str,
+    settings: Settings,
+    client: httpx.AsyncClient,
 ) -> None:
 
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
 
-    patch_data = {'retracted': True}
+    patch_data = {"retracted": True}
 
     logger.critical("Revoking %s at %s", getattr(item.properties, "instance_id"), url)
     result = await client.patch(url, content=patch_data, timeout=5)
@@ -63,12 +70,11 @@ async def soft_delete_item(
 
 
 async def hard_delete_item(
-    collection_id: str,  item_id: str, settings: Settings, client: httpx.AsyncClient
+    collection_id: str, item_id: str, settings: Settings, client: httpx.AsyncClient
 ) -> None:
 
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
-
 
     logger.critical("Deleting %s at %s", item_id, url)
     result = await client.delete(url, timeout=5)
