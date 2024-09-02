@@ -167,12 +167,8 @@ def esgf_delete(
             result = client.delete(
                 f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
             )
-        # Not Yet Implemented
-        # else:
-        #     result = client.patch(
-        #         f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-        #         content={"retracted": True},
-        #     )
+        else:
+            raise NotImplementedError("Soft delete is not implemented yet.")
         if result.status_code >= 300:
             raise Exception(result.content)
 

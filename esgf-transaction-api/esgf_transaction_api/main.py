@@ -197,6 +197,5 @@ async def delete_item(item_id: str, collection_id: str, request: Request) -> Non
     logger.info("Deleting %s item", collection_id)
     if request.method == "DELETE":
         await revoke_item_hard(collection_id, item_id)
-    # Not yet Implemented
-    # else:
-    #     await revoke_item_soft(collection_id, item_id)
+    else:
+        raise NotImplementedError("Soft delete is not implemented yet.")
