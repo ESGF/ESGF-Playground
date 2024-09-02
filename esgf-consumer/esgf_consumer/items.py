@@ -45,30 +45,6 @@ async def update_item(
     return None
 
 
-async def soft_delete_item(
-    collection_id: str,
-    item: Item,
-    item_id: str,
-    settings: Settings,
-    client: httpx.AsyncClient,
-) -> None:
-
-    path = f"collections/{collection_id}/items/{item_id}"
-    url = urljoin(str(settings.stac_server), path)
-
-    patch_data = {"retracted": True}
-
-    logger.critical("Revoking %s at %s", getattr(item.properties, "instance_id"), url)
-    result = await client.patch(url, content=patch_data, timeout=5)
-    if result.status_code < 300:
-        logger.critical("Item Revoked")
-
-    else:
-        logger.critical("Item not revoked: %s", result.content)
-
-    return None
-
-
 async def hard_delete_item(
     collection_id: str, item_id: str, settings: Settings, client: httpx.AsyncClient
 ) -> None:

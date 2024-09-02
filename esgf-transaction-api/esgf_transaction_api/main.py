@@ -118,15 +118,6 @@ async def modify_item(collection_id: str, item: Item, item_id: str) -> None:
     await post_message(event)
 
 
-# Not Yet Implemented
-# async def revoke_item_soft(collection_id: str, item_id: str) -> None:
-#     payload = RevokePayload(
-#         method="PATCH", collection_id=collection_id, item_id=item_id
-#     )
-#     event = item_body(payload)
-#     await post_message(event)
-
-
 async def revoke_item_hard(collection_id: str, item_id: str) -> None:
     payload = RevokePayload(
         method="DELETE", collection_id=collection_id, item_id=item_id
