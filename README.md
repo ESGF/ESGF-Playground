@@ -251,7 +251,7 @@ This UI provides a complete view of the stage of your Kafka service and is descr
 
 ### STAC Browser
 
-A STAC browser simulating the **East** ESGF index is available at http://localhost:9011. This service should be listening 
+A STAC browser simulating the **East** ESGF index is available at http://localhost:9011. This service should be listening  
 to all the publication, retraction and update events in the Kafka queue.
 
 A STAC browser simulating the **West** ESGF index is available at http://localhost:9015. This service should be listening 
