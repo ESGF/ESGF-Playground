@@ -25,11 +25,7 @@ from esgf_consumer.exceptions import (
     ESGFConsumerNotImplementedPayloadError,
     ESGFConsumerUnknownPayloadError,
 )
-from esgf_consumer.items import (
-    create_item,
-    hard_delete_item,
-    update_item,
-)
+from esgf_consumer.items import create_item, hard_delete_item, update_item
 from esgf_consumer.producers import get_producer
 
 logging.getLogger().setLevel(logging.DEBUG)
