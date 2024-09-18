@@ -55,4 +55,7 @@ async def _create_collection(
     if create_result.status_code < 300:
         return None
 
+    # TODO: Implement this correctly
+    create_result.raise_for_status()
+    
     raise Exception("Could not create collection")
