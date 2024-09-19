@@ -170,7 +170,7 @@ def esgf_delete(
             click.echo("Soft deleting item")
             click.echo()
 
-            content = {"Properties": {"retracted": True}}
+            content = {"properties": {"retracted": True}}
             result = client.patch(
                 f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
                 content=json.dumps(content),
