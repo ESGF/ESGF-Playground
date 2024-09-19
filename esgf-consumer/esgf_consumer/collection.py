@@ -75,7 +75,7 @@ async def _create_collection(
                 {
                     "rel": "items",
                     "type": "application/geo+json",
-                    "href": f"https://api.stac.ceda.ac.uk/collections/cmip6/{collection_id}",
+                    "href": f"https://api.stac.ceda.ac.uk/collections/{collection_id}/items",
                 },
                 {
                     "rel": "root",
