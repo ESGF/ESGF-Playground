@@ -132,7 +132,7 @@ services:
   # Secondary ESGF Node FastAPI
   app-elasticsearch-secondary:
     container_name: stac-fastapi-es-secondary
-    image: ghcr.io/djspstfc/stac-fastapi-es:1.0
+    image: esgfdeploy/stac-fastapi-elasticsearch:v1.1
     restart: always
     environment:
       - STAC_FASTAPI_TITLE=Simulated ESGF Secondary Index STAC interface
