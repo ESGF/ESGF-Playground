@@ -1,12 +1,12 @@
+import json
 import random
 import time
 from typing import Literal
 
 import click
 import httpx
-from esgf_playground_utils.models.item import ESGFItem
-
 from esgf_generator import ESGFItemFactory
+from esgf_playground_utils.models.item import ESGFItem
 
 NODE_PORTS = {"east": 9050, "west": 9051}
 
@@ -128,7 +128,6 @@ def esgf_update(
             if result.status_code >= 300:
                 raise Exception(result.content)
 
-    click.echo()
     click.echo("Done")
 
 
@@ -168,8 +167,92 @@ def esgf_delete(
                 f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
             )
         else:
-            raise NotImplementedError("Soft delete is not implemented yet.")
+            click.echo("Soft deleting item")
+            click.echo()
+
+            content = {"Properties": {"retracted": True}}
+            result = client.patch(
+                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                content=json.dumps(content),
+            )
         if result.status_code >= 300:
             raise Exception(result.content)
+
+    click.echo("Done")
+
+
+@click.command()
+def esgf_generator_test() -> None:
+    """
+    Generate a number of ESGF items.
+
+    COUNT is the number of items to generate.
+    """
+    click.echo(f"Producing a STAC record to test")
+    click.echo()
+
+    data = ESGFItemFactory().batch(
+        1,
+        stac_extensions=[],
+    )
+    instance = data[0]
+    publish = True
+
+    if publish:
+        click.echo(f"Sending {instance.properties.instance_id} to ESGF node 'east'")
+        click.echo()
+
+        with httpx.Client() as client:
+
+            # Create Item
+            result = client.post(
+                f"http://localhost:9050/{instance.collection}/items",
+                content=instance.model_dump_json(),
+            )
+            if result.status_code >= 300:
+                click.echo("Test [1/3]: Failed")
+                click.echo(
+                    f"Failed to create item, Error: \n{result.content}, Status: {result.status_code}\n"
+                )
+
+            else:
+                click.echo("Test [1/3]: Passed")
+                click.echo(
+                    f"Created item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
+                )
+
+            # Replication
+            patch_data = {"node": "Fake Node"}
+            patch_result = client.patch(
+                f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
+                json=patch_data,
+            )
+            if patch_result.status_code >= 300:
+                click.echo("Test [2/3]: Failed")
+                click.echo(
+                    f"Failed to add node to item, Error: \n{patch_result.content}, Status: {patch_result.status_code}\n"
+                )
+            else:
+                click.echo("Test [2/3]: Passed")
+                click.echo(
+                    f"Added  node to item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
+                )
+            # Retraction
+            remove_patch = {"Properties": {"retracted": True}}
+            remove_result = client.patch(
+                f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
+                json=remove_patch,
+            )
+            if remove_result.status_code >= 300:
+                click.echo("Test [3/3]: Failed")
+                click.echo(
+                    f"Failed to remove node from item, Error: \n{remove_result.content}, Status: {remove_result.status_code}\n"
+                )
+
+            else:
+                click.echo("Test [3/3]: Passed")
+                click.echo(
+                    f"Reomved node from item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
+                )
 
     click.echo("Done")

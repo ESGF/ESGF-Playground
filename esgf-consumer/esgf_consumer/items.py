@@ -1,4 +1,6 @@
+import json
 import logging
+from typing import Any, Dict
 from urllib.parse import urljoin
 
 import httpx
@@ -56,6 +58,27 @@ async def hard_delete_item(
     result = await client.delete(url, timeout=5)
     if result.status_code < 300:
         logger.critical("Item Deleted")
+
+    else:
+        logger.critical("Item not deleted: %s", result.content)
+
+    return None
+
+
+async def soft_delete_item(
+    collection_id: str,
+    item: dict,
+    item_id: str,
+    settings: Settings,
+    client: httpx.AsyncClient,
+) -> None:
+    path = f"collections/{collection_id}/items/{item_id}"
+    url = urljoin(str(settings.stac_server), path)
+
+    logger.critical("Soft deleting %s at %s", item_id, url)
+    result = await client.patch(url, content=json.dumps(item), timeout=5)
+    if result.status_code < 300:
+        logger.critical("Item Soft Deleted")
 
     else:
         logger.critical("Item not deleted: %s", result.content)

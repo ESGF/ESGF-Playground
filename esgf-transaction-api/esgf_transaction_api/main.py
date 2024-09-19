@@ -2,7 +2,7 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, Optional, Union
+from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 import aiokafka
 from esgf_playground_utils.config.kafka import Settings
@@ -12,11 +12,12 @@ from esgf_playground_utils.models.kafka import (
     Data,
     KafkaEvent,
     Metadata,
+    PartialUpdatePayload,
     Publisher,
     RevokePayload,
     UpdatePayload,
 )
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from stac_pydantic.item import Item
 from stac_pydantic.item_collection import ItemCollection
 
@@ -48,7 +49,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 def item_body(
-    payload: Union[RevokePayload, UpdatePayload, CreatePayload]
+    payload: Union[RevokePayload, UpdatePayload, CreatePayload, PartialUpdatePayload]
 ) -> KafkaEvent:
     data = Data(type="STAC", version="1.0.0", payload=payload)
     auth = Auth(client_id="esgf-generator", server="docker-compose-local")
@@ -126,6 +127,14 @@ async def revoke_item_hard(collection_id: str, item_id: str) -> None:
     await delete_message(event)
 
 
+async def revoke_item_soft(collection_id: str, item_id: str, item: dict) -> None:
+    payload = PartialUpdatePayload(
+        method="PATCH", collection_id=collection_id, item=item, item_id=item_id
+    )
+    event = item_body(payload)
+    await delete_message(event)
+
+
 @app.post("/{collection_id}/items", status_code=202)
 async def create_item(
     collection_id: str, item: Union[Item, ItemCollection]
@@ -169,13 +178,16 @@ async def update_item(collection_id: str, item_id: str, item: Item) -> Item:
     """
     logger.info("Updating %s item", collection_id)
 
-    await modify_item(collection_id, item, item_id)
+    try:
+        await modify_item(collection_id, item, item_id)
+    except Exception as e:
+        (f"Collection {collection_id} not found: {str(e)}")
 
     return item
 
 
 @app.delete("/{collection_id}/items/{item_id}")
-async def delete_item(item_id: str, collection_id: str, request: Request) -> None:
+async def delete_item_hard(item_id: str, collection_id: str) -> None:
     """Add DELETE message to kafka event stream.
 
     Args:
@@ -186,7 +198,26 @@ async def delete_item(item_id: str, collection_id: str, request: Request) -> Non
         Optional[stac_types.Item]: The deleted item, or `None` if the item was successfully deleted.
     """
     logger.info("Deleting %s item", collection_id)
-    if request.method == "DELETE":
-        await revoke_item_hard(collection_id, item_id)
-    else:
-        raise NotImplementedError("Soft delete is not implemented yet.")
+
+    await revoke_item_hard(collection_id, item_id)
+
+    return None
+
+
+@app.patch("/{collection_id}/items/{item_id}")
+async def delete_item_soft(item_id: str, collection_id: str, item: dict) -> None:
+    """Add DELETE message to kafka event stream.
+
+    Args:
+        item_id (str): The identifier of the item to delete.
+        collection_id (str): The identifier of the collection that contains the item.
+        item (dict): The item data beiing patched.
+
+    Returns:
+        None
+    """
+    logger.info("Deleting %s item", collection_id)
+
+    await revoke_item_soft(collection_id, item_id, item)
+
+    return None
