@@ -211,9 +211,7 @@ def esgf_generator_test() -> None:
             )
             if result.status_code >= 300:
                 click.echo("Test [1/3]: Failed")
-                click.echo(
-                    f"Failed to create item, Error: \n{result.content}, Status: {result.status_code}\n"
-                )
+                raise Exception(result.content)
 
             else:
                 click.echo("Test [1/3]: Passed")
@@ -231,9 +229,7 @@ def esgf_generator_test() -> None:
             )
             if patch_result.status_code >= 300:
                 click.echo("Test [2/3]: Failed")
-                click.echo(
-                    f"Failed to add node to item, Error: \n{patch_result.content}, Status: {patch_result.status_code}\n"
-                )
+                raise Exception(result.content)
             else:
                 click.echo("Test [2/3]: Passed")
                 click.echo(
@@ -250,9 +246,7 @@ def esgf_generator_test() -> None:
             )
             if remove_result.status_code >= 300:
                 click.echo("Test [3/3]: Failed")
-                click.echo(
-                    f"Failed to remove node from item, Error: \n{remove_result.content}, Status: {remove_result.status_code}\n"
-                )
+                raise Exception(result.content)
 
             else:
                 click.echo("Test [3/3]: Passed")
