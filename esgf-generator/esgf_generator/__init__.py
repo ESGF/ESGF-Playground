@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, TypeVar
 from urllib.parse import urljoin
 
 import httpx
-
 from esgf_playground_utils.models.item import ESGFItem, ESGFItemProperties
 from polyfactory import PostGenerated
 from polyfactory.factories.pydantic_factory import ModelFactory
