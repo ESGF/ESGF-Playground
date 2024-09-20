@@ -220,12 +220,14 @@ def esgf_generator_test() -> None:
                 click.echo(
                     f"Created item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
                 )
+            click.echo("Waiting 10 seconds...")
+            time.sleep(10)
 
             # Replication
-            patch_data = {"node": "Fake Node"}
+            patch_data = {"properties": {"retracted": True}}
             patch_result = client.patch(
                 f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
-                json=patch_data,
+                content=json.dumps(patch_data),
             )
             if patch_result.status_code >= 300:
                 click.echo("Test [2/3]: Failed")
@@ -237,11 +239,14 @@ def esgf_generator_test() -> None:
                 click.echo(
                     f"Added  node to item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
                 )
+            click.echo("Waiting 10 seconds...")
+            time.sleep(10)
+
             # Retraction
-            remove_patch = {"Properties": {"retracted": True}}
+            remove_patch = {"properties": {"retracted": False}}
             remove_result = client.patch(
                 f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
-                json=remove_patch,
+                content=json.dumps(remove_patch),
             )
             if remove_result.status_code >= 300:
                 click.echo("Test [3/3]: Failed")
