@@ -189,7 +189,7 @@ def esgf_generator_test() -> None:
 
     COUNT is the number of items to generate.
     """
-    click.echo(f"Producing a STAC record to test")
+    click.echo("Producing a STAC record to test")
     click.echo()
 
     data = ESGFItemFactory().batch(
