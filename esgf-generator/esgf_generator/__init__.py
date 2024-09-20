@@ -6,11 +6,8 @@ from urllib.parse import urljoin
 
 import httpx
 from esgf_generator.data import CHOICES
-from esgf_generator.static_generators import (
-    generate_datetime,
-    generate_geometry,
-    instance_id,
-)
+from esgf_generator.static_generators import (generate_datetime,
+                                              generate_geometry, instance_id)
 from esgf_playground_utils.models.item import ESGFItem, ESGFItemProperties
 from polyfactory import PostGenerated
 from polyfactory.factories.pydantic_factory import ModelFactory
