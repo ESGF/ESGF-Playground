@@ -99,8 +99,18 @@ def esgf_generator(
     default=False,
     help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
 )
+@click.option(
+    "--partial",
+    type=str,
+    default="{}",
+    help="JSON string representing the partial update data. Default: empty dictionary",
+)
 def esgf_update(
-    collection_id: str, item_id: str, publish: bool, node: Literal["east", "west"]
+    collection_id: str,
+    item_id: str,
+    publish: bool,
+    node: Literal["east", "west"],
+    partial: str,
 ) -> None:
     """
     Update an ESGF item.
@@ -116,16 +126,30 @@ def esgf_update(
 
     item = data[0]
 
+    partial_update_data: Dict[str, Any] = json.loads(partial)
+
     item = update_topic(item, item_id, collection_id)
 
     if publish:
-        click.echo(f"Updating item {item_id} in collection {collection_id}")
-        click.echo()
         with httpx.Client() as client:
-            result = client.put(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                content=item.model_dump_json(),
-            )
+            if partial_update_data:
+                click.echo(
+                    f"Partially updating item {item_id} in collection {collection_id}"
+                )
+                click.echo()
+
+                result = client.patch(
+                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    content=json.dumps(partial_update_data),
+                )
+
+            else:
+                click.echo(f"Updating item {item_id} in collection {collection_id}")
+                click.echo()
+                result = client.put(
+                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    content=item.model_dump_json(),
+                )
             if result.status_code >= 300:
                 raise Exception(result.content)
 

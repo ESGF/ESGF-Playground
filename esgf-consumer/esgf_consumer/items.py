@@ -65,7 +65,7 @@ async def hard_delete_item(
     return None
 
 
-async def soft_delete_item(
+async def partial_update_item(
     collection_id: str,
     item: dict,
     item_id: str,
@@ -75,12 +75,12 @@ async def soft_delete_item(
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
 
-    logger.critical("Soft deleting %s at %s", item_id, url)
+    logger.critical("Partially updating %s at %s", item_id, url)
     result = await client.patch(url, content=json.dumps(item), timeout=5)
     if result.status_code < 300:
-        logger.critical("Item Soft Deleted")
+        logger.critical("Item Partially Updated")
 
     else:
-        logger.critical("Item not deleted: %s", result.content)
+        logger.critical("Item not updated: %s", result.content)
 
     return None

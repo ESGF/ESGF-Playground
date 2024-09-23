@@ -6,11 +6,17 @@ from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 import aiokafka
 from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utils.models.kafka import (Auth, CreatePayload, Data,
-                                                KafkaEvent, Metadata,
-                                                PartialUpdatePayload,
-                                                Publisher, RevokePayload,
-                                                UpdatePayload)
+from esgf_playground_utils.models.kafka import (
+    Auth,
+    CreatePayload,
+    Data,
+    KafkaEvent,
+    Metadata,
+    PartialUpdatePayload,
+    Publisher,
+    RevokePayload,
+    UpdatePayload,
+)
 from fastapi import FastAPI, HTTPException
 from stac_pydantic.item import Item
 from stac_pydantic.item_collection import ItemCollection
@@ -86,7 +92,7 @@ async def post_message(event: KafkaEvent) -> None:
         raise HTTPException(status_code=500, detail=repr(exc)) from exc
 
 
-async def delete_message(event: KafkaEvent) -> None:
+async def alternate_message(event: KafkaEvent) -> None:
     try:
         value = event.model_dump_json().encode("utf8")
         topic = get_topic_alternate(event.data.payload.item_id)
@@ -118,15 +124,15 @@ async def revoke_item_hard(collection_id: str, item_id: str) -> None:
         method="DELETE", collection_id=collection_id, item_id=item_id
     )
     event = item_body(payload)
-    await delete_message(event)
+    await alternate_message(event)
 
 
-async def revoke_item_soft(collection_id: str, item_id: str, item: dict) -> None:
+async def partial_update_item(collection_id: str, item_id: str, item: dict) -> None:
     payload = PartialUpdatePayload(
         method="PATCH", collection_id=collection_id, item=item, item_id=item_id
     )
     event = item_body(payload)
-    await delete_message(event)
+    await alternate_message(event)
 
 
 @app.post("/{collection_id}/items", status_code=202)
@@ -199,19 +205,19 @@ async def delete_item_hard(item_id: str, collection_id: str) -> None:
 
 
 @app.patch("/{collection_id}/items/{item_id}")
-async def delete_item_soft(item_id: str, collection_id: str, item: dict) -> None:
-    """Add DELETE message to kafka event stream.
+async def partial_update(item_id: str, collection_id: str, item: dict) -> None:
+    """Add Update message to kafka event stream.
 
     Args:
-        item_id (str): The identifier of the item to delete.
+        item_id (str): The identifier of the item to partially update.
         collection_id (str): The identifier of the collection that contains the item.
         item (dict): The item data beiing patched.
 
     Returns:
         None
     """
-    logger.info("Deleting %s item", collection_id)
+    logger.info("Updating %s item", collection_id)
 
-    await revoke_item_soft(collection_id, item_id, item)
+    await partial_update_item(collection_id, item_id, item)
 
     return None

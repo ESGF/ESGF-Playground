@@ -10,17 +10,29 @@ import httpx
 from aiokafka.errors import KafkaError
 from esgf_consumer.collection import ensure_collection
 from esgf_consumer.consumers import get_consumer
-from esgf_consumer.exceptions import (ESGFConsumerNotImplementedPayloadError,
-                                      ESGFConsumerUnknownPayloadError)
-from esgf_consumer.items import (create_item, hard_delete_item,
-                                 soft_delete_item, update_item)
+from esgf_consumer.exceptions import (
+    ESGFConsumerNotImplementedPayloadError,
+    ESGFConsumerUnknownPayloadError,
+)
+from esgf_consumer.items import (
+    create_item,
+    hard_delete_item,
+    partial_update_item,
+    update_item,
+)
 from esgf_consumer.producers import get_producer
 from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utils.models.kafka import (CreatePayload, Error,
-                                                ErrorType, KafkaEvent,
-                                                PartialUpdatePayload,
-                                                RevokePayload, UpdatePayload)
+from esgf_playground_utils.models.kafka import (
+    CreatePayload,
+    Error,
+    ErrorType,
+    KafkaEvent,
+    PartialUpdatePayload,
+    RevokePayload,
+    UpdatePayload,
+)
 from pydantic import ValidationError
+
 
 logging.getLogger().setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -166,14 +178,14 @@ async def _handle_message(
             logger.critical("Item %s deleted.", event.data.payload.item_id)
 
         case PartialUpdatePayload(method="PATCH"):
-            await soft_delete_item(
+            await partial_update_item(
                 event.data.payload.collection_id,
                 event.data.payload.item,
                 event.data.payload.item_id,
                 settings,
                 client,
             )
-            logger.critical("Item %s soft deleted.", event.data.payload.item_id)
+            logger.critical("Item %s partially Updated.", event.data.payload.item_id)
 
         case _:
             raise ESGFConsumerUnknownPayloadError
