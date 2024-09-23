@@ -1,7 +1,7 @@
 import json
 import random
 import time
-from typing import Dict, Literal
+from typing import Any, Dict, Literal
 
 import click
 import httpx
