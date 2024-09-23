@@ -67,7 +67,7 @@ async def hard_delete_item(
 
 async def partial_update_item(
     collection_id: str,
-    item: dict,
+    item: Dict[str, Any],
     item_id: str,
     settings: Settings,
     client: httpx.AsyncClient,

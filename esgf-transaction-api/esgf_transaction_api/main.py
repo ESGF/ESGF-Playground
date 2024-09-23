@@ -127,7 +127,9 @@ async def revoke_item_hard(collection_id: str, item_id: str) -> None:
     await alternate_message(event)
 
 
-async def partial_update_item(collection_id: str, item_id: str, item: dict) -> None:
+async def partial_update_item(
+    collection_id: str, item_id: str, item: Dict[str, Any]
+) -> None:
     payload = PartialUpdatePayload(
         method="PATCH", collection_id=collection_id, item=item, item_id=item_id
     )
@@ -205,7 +207,9 @@ async def delete_item_hard(item_id: str, collection_id: str) -> None:
 
 
 @app.patch("/{collection_id}/items/{item_id}")
-async def partial_update(item_id: str, collection_id: str, item: dict) -> None:
+async def partial_update(
+    item_id: str, collection_id: str, item: Dict[str, Any]
+) -> None:
     """Add Update message to kafka event stream.
 
     Args:
