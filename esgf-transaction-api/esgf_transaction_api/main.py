@@ -1,5 +1,6 @@
 import logging
 import sys
+import httpx
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, Optional, Union
@@ -20,6 +21,7 @@ from esgf_playground_utils.models.kafka import (
 from fastapi import FastAPI, HTTPException
 from stac_pydantic.item import Item
 from stac_pydantic.item_collection import ItemCollection
+from pystac_client import Client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -46,6 +48,66 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+def check_item_exists1(collection_id: str, item_id: str) -> bool:
+    stac_url = f"{settings.stac_server}"
+    logger.info(f"STAC Server URL: {stac_url}")
+
+    try:
+        catalog = Client.open(stac_url)
+        collection_exists = any(
+            col.id == collection_id for col in catalog.get_collections()
+        )
+
+        if not collection_exists:
+            return False
+
+        logger.info(
+            f"Collection '{collection_id}' exists. Checking for item '{item_id}'..."
+        )
+
+        collection_url = f"{stac_url}/collections/{collection_id}/items"
+        catalog = Client.open(collection_url)
+        search = catalog.search(ids=[item_id])
+
+        search = catalog.search(ids=[item_id])
+
+        item = next(search.get_items(), None)
+
+        if item:
+            logger.info(f"Item already exists: {item}")
+            return True
+        else:
+            return False
+
+    except Exception as e:
+        logger.error(f"Error accessing STAC server or collection: {str(e)}")
+        return False
+
+
+async def check_item_exists2(collection_id: str, item_id: str) -> bool:
+    stac_url = f"{settings.stac_server}collections/{collection_id}/items/{item_id}"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(stac_url)
+            if response.status_code == 200:
+                logger.info(f"Item '{item_id}' exists in collection '{collection_id}'.")
+                return True
+            elif response.status_code == 404:
+                logger.info(
+                    f"Item '{item_id}' does not exist in collection '{collection_id}'."
+                )
+                return False
+            else:
+                logger.error(
+                    f"Unexpected response from STAC server: {response.status_code}"
+                )
+                return False
+        except httpx.HTTPError as e:
+            logger.error(f"HTTP error occurred: {str(e)}")
+            return False
 
 
 def item_body(
@@ -151,9 +213,13 @@ async def create_item(
         Optional[stac_types.Item]: The item, or `None` if the item was successfully deleted.
     """
     logger.info("Creating %s item", collection_id)
+    if await check_item_exists1(collection_id, item.id):
+        logger.info("Item already exists")
+        raise HTTPException(status_code=409, detail="Item already exists")
+
+    logger.info("Item does not exist")
     if isinstance(item, Item):
         await post_item(collection_id, item)
-
     else:
         for i in item:
             await post_item(collection_id, i)

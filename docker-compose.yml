@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   # ESGF East Node FastAPI Server
@@ -26,8 +26,7 @@ services:
       - ./esdata-east:/usr/share/elasticsearch/data
     depends_on:
       - elasticsearch-east
-    command:
-      bash -c "./scripts/wait-for-it-es.sh es-container-east:9200 && python -m stac_fastapi.elasticsearch.app"
+    command: bash -c "./scripts/wait-for-it-es.sh es-container-east:9200 && python -m stac_fastapi.elasticsearch.app"
 
   # ESGF East Node ElasticSearch Server
   elasticsearch-east:
@@ -90,8 +89,7 @@ services:
       - ./esdata-west:/usr/share/elasticsearch/data
     depends_on:
       - elasticsearch-west
-    command:
-      bash -c "./scripts/wait-for-it-es.sh es-container-west:9200 && python -m stac_fastapi.elasticsearch.app"
+    command: bash -c "./scripts/wait-for-it-es.sh es-container-west:9200 && python -m stac_fastapi.elasticsearch.app"
 
   # ESGF West Node ElasticSearch Server
   elasticsearch-west:
@@ -154,8 +152,7 @@ services:
       - ./esdata-secondary:/usr/share/elasticsearch/data
     depends_on:
       - elasticsearch-secondary
-    command:
-      bash -c "./scripts/wait-for-it-es.sh es-container-secondary:9200 && python -m stac_fastapi.elasticsearch.app"
+    command: bash -c "./scripts/wait-for-it-es.sh es-container-secondary:9200 && python -m stac_fastapi.elasticsearch.app"
 
   # Secondary ESGF Node ElasticSearch Server
   elasticsearch-secondary:
@@ -176,9 +173,9 @@ services:
     environment:
       SB_catalogUrl: http://localhost:9012/
     ports:
-    - "9013:8080"
+      - "9013:8080"
     depends_on:
-    - app-elasticsearch-secondary
+      - app-elasticsearch-secondary
 
   # Secondary ESGF Node KAFKA Consumer
   stac-consumer-secondary: # TODO build this
@@ -187,7 +184,7 @@ services:
       dockerfile: Dockerfile
     environment:
       CONSUMER_GROUP: "secondary-node"
-      BOOTSTRAP_SERVERS : '["kafka1:19092"]'
+      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
       KAFKA_TOPICS: '.*\.historical\..*'
       STAC_SERVER: "http://app-elasticsearch-secondary:8080"
     depends_on:
@@ -200,9 +197,11 @@ services:
       context: esgf-transaction-api
       dockerfile: Dockerfile
     environment:
-      BOOTSTRAP_SERVERS : '["kafka1:19092"]'
+      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
     ports:
       - "9050:8000"
+    volumes:
+    - ./esgf-transaction-api:/opt/esgf-transaction-api
     depends_on:
       kafka1:
         condition: service_healthy
@@ -213,9 +212,11 @@ services:
       context: esgf-transaction-api
       dockerfile: Dockerfile
     environment:
-      BOOTSTRAP_SERVERS : '["kafka1:19092"]'
+      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
     ports:
       - "9051:8000"
+    volumes:
+    - ./esgf-transaction-api:/opt/esgf-transaction-api
     depends_on:
       kafka1:
         condition: service_healthy
@@ -313,9 +314,9 @@ services:
       CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
       CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
       CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://kafka-schema-registry:8081'
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
       CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://kafka-schema-registry:8081'
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
       CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
@@ -324,7 +325,7 @@ services:
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_PLUGIN_PATH: '/usr/share/java,/etc/kafka-connect/jars,/usr/share/confluent-hub-components'
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/etc/kafka-connect/jars,/usr/share/confluent-hub-components"
     volumes:
       - ./connectors:/etc/kafka-connect/jars/
     depends_on:
@@ -339,7 +340,6 @@ services:
         confluent-hub install --no-prompt debezium/debezium-connector-mysql:latest
         confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:0.4.0
         /etc/confluent/docker/run
-
 
   # Central ESGF KSQLDB Server (Optional)
   ksqldb-server:
