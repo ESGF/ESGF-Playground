@@ -1,12 +1,11 @@
 import logging
 import sys
-import httpx
-import requests
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 import aiokafka
+import httpx
 from esgf_playground_utils.config.kafka import Settings
 from esgf_playground_utils.models.kafka import (
     Auth,
@@ -21,8 +20,6 @@ from esgf_playground_utils.models.kafka import (
 )
 from fastapi import FastAPI, HTTPException
 from stac_pydantic.item import Item
-from stac_pydantic.item_collection import ItemCollection
-from pystac_client import Client
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -164,9 +161,7 @@ async def partial_update_item(
 
 
 @app.post("/{collection_id}/items", status_code=202)
-async def create_item(
-    collection_id: str, item: Union[Item, ItemCollection]
-) -> Union[Item, ItemCollection]:
+async def create_item(collection_id: str, item: Item) -> Item:
     """Add CREATE message to kafka event stream.
 
     Args:

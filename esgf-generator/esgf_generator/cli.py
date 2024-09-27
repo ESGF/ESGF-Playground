@@ -302,7 +302,7 @@ def duplication_test() -> None:
 
     with httpx.Client() as client:
 
-        result1 = client.post(
+        client.post(
             f"http://localhost:9050/{instance.collection}/items",
             content=instance.model_dump_json(),
         )
@@ -312,11 +312,11 @@ def duplication_test() -> None:
         click.echo("Creating duplicate item")
         click.echo()
 
-        result2 = client.post(
+        result = client.post(
             f"http://localhost:9050/{instance.collection}/items",
             content=instance.model_dump_json(),
         )
-        click.echo(f"Duplicate Reponse: {result2.content}")
+        click.echo(f"Duplicate Reponse: {result.content.decode('utf-8')}")
 
         click.echo()
 
