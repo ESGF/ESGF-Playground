@@ -288,7 +288,7 @@ def duplication_test() -> None:
     Generate a number of ESGF items.
 
     """
-    click.echo("Producing a STAC record to test")
+    click.echo("Producing a STAC item to test")
     click.echo()
 
     data = ESGFItemFactory().batch(
@@ -297,20 +297,26 @@ def duplication_test() -> None:
     )
     instance = data[0]
 
+    click.echo(instance.model_dump_json(indent=2))
+    click.echo()
+
     with httpx.Client() as client:
+
         result1 = client.post(
             f"http://localhost:9050/{instance.collection}/items",
             content=instance.model_dump_json(),
         )
-        click.echo(result1.status_code)
+
+        time.sleep(10)
+
+        click.echo("Creating duplicate item")
+        click.echo()
 
         result2 = client.post(
             f"http://localhost:9050/{instance.collection}/items",
             content=instance.model_dump_json(),
         )
-        click.echo(result2.status_code)
-
-        click.echo(instance.model_dump_json(indent=2))
+        click.echo(f"Duplicate Reponse: {result2.content}")
 
         click.echo()
 
