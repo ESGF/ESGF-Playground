@@ -60,6 +60,7 @@ services:
       CONSUMER_GROUP: "esgf-east"
       BOOTSTRAP_SERVERS: '["kafka1:19092"]'
       STAC_SERVER: "http://app-elasticsearch-east:8080"
+      SCRIPT: "esgf_consumer/__init__.py"
     depends_on:
       kafka1:
         condition: service_healthy
@@ -123,6 +124,7 @@ services:
       CONSUMER_GROUP: "esgf-west"
       BOOTSTRAP_SERVERS: '["kafka1:19092"]'
       STAC_SERVER: "http://app-elasticsearch-west:8080"
+      SCRIPT: "esgf_consumer/__init__.py"
     depends_on:
       kafka1:
         condition: service_healthy
@@ -187,6 +189,7 @@ services:
       BOOTSTRAP_SERVERS: '["kafka1:19092"]'
       KAFKA_TOPICS: '.*\.historical\..*'
       STAC_SERVER: "http://app-elasticsearch-secondary:8080"
+      SCRIPT: "esgf_consumer/__init__.py"
     depends_on:
       kafka1:
         condition: service_healthy
@@ -372,6 +375,46 @@ services:
       service: conduktor-console
       file: conduktor.yml
 
+  mongo:
+    image: mongo
+    container_name: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_BASICAUTH: "false"
+    ports:
+      - "8085:8081"
+
+  mongo-consumer:
+    build:
+      context: esgf-consumer
+      dockerfile: Dockerfile
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    environment:
+      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
+      MONGO_URI: mongodb://root:example@mongo:27017/
+      MONGODB_DATABASE: esgf_playground_db
+      MONGODB_COLLECTION: esgf_data_collection
+      SCRIPT: "esgf_consumer/mongo_consumer.py"
+
+
 volumes:
   pg_data: {}
   conduktor_data: {}
+  mongo_data: {}

@@ -1,5 +1,5 @@
 """
-Prototype consumer for ESGF. Takes events frm KAFKA and sends them to an ESGF STAC index.
+Prototype consumer for ESGF. Takes events from KAFKA and sends them to an ESGF STAC index.
 """
 
 import asyncio
