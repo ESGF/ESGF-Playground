@@ -11,6 +11,8 @@ polyfactory = "^2.16.2"
 httpx = "^0.27.0"
 click = "^8.1.7"
 esgf-playground-utils = "^0.3.0"
+pytest = "^8.3.3"
+elasticsearch = "^8.15.1"
 
 
 [tool.poetry.group.black.dependencies]
@@ -40,8 +42,6 @@ xenon = "^0.9.1"
 esgf_generator = "esgf_generator.cli:esgf_generator"
 esgf_update = "esgf_generator.cli:esgf_update"
 esgf_delete = "esgf_generator.cli:esgf_delete"
-esgf_generator_test = "esgf_generator.cli:esgf_generator_test"
-duplication_test = "esgf_generator.cli:duplication_test"
 
 [tool.mypy]
 plugins = [

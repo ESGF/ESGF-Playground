@@ -148,7 +148,7 @@ def generate_bbox(
 
 
 def generate_properties() -> Dict[str, Any]:
-    result: Dict[str, Any] = ESGFPropertiesFactory.build().to_dict()
+    result: Dict[str, Any] = ESGFPropertiesFactory.build().model_dump()
     return result
 
 

@@ -15,7 +15,7 @@ NODE_PORTS = {"east": 9050, "west": 9051}
 def update_topic(item: ESGFItem, item_id: str, collection_id: str) -> ESGFItem:
     item.id = item_id
     item.collection = collection_id
-    item.properties.instance_id = item_id
+    item.properties.instance_id = item.id
     item.properties.title = item.id
 
     split_item = item_id.split(".")
@@ -66,16 +66,23 @@ def esgf_generator(
         stac_extensions=[],
     )
     for instance in data:
+        click.echo(
+            f"Generated item with ID: {instance.id} in collection: {instance.collection}"
+        )
+
         if publish:
             click.echo(
                 f"Sending {instance.properties.instance_id} to ESGF node '{node}'"
             )
+            click.echo()
 
             with httpx.Client() as client:
                 result = client.post(
                     f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
                     content=instance.model_dump_json(),
                 )
+                click.echo(f"Response code: {result.status_code}")
+                click.echo()
                 if result.status_code >= 300:
                     raise Exception(result.content)
 
@@ -150,6 +157,7 @@ def esgf_update(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
                     content=item.model_dump_json(),
                 )
+            click.echo(f"Response code: {result.status_code}")
             if result.status_code >= 300:
                 raise Exception(result.content)
 
@@ -186,138 +194,23 @@ def esgf_delete(
     click.echo(f"Deleting item {item_id} in collection {collection_id}")
     click.echo()
 
-    with httpx.Client() as client:
-        if hard:
-            result = client.delete(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
-            )
-        else:
-            click.echo("Soft deleting item")
-            click.echo()
-
-            content = {"properties": {"retracted": True}}
-            result = client.patch(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                content=json.dumps(content),
-            )
-        if result.status_code >= 300:
-            raise Exception(result.content)
-
-    click.echo("Done")
-
-
-@click.command()
-def esgf_generator_test() -> None:
-    """
-    Generate a number of ESGF items.
-
-    COUNT is the number of items to generate.
-    """
-    click.echo("Producing a STAC record to test")
-    click.echo()
-
-    data = ESGFItemFactory().batch(
-        1,
-        stac_extensions=[],
-    )
-    instance = data[0]
-    publish = True
-
     if publish:
-        click.echo(f"Sending {instance.properties.instance_id} to ESGF node 'east'")
-        click.echo()
-
         with httpx.Client() as client:
+            if hard:
+                result = client.delete(
+                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
+                )
+            else:
+                click.echo("Soft deleting item")
+                click.echo()
 
-            # Create Item
-            result = client.post(
-                f"http://localhost:9050/{instance.collection}/items",
-                content=instance.model_dump_json(),
-            )
+                content = {"properties": {"retracted": True}}
+                result = client.patch(
+                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    content=json.dumps(content),
+                )
+            click.echo(f"Response code: {result.status_code}")
             if result.status_code >= 300:
-                click.echo("Test [1/3]: Failed")
                 raise Exception(result.content)
-
-            else:
-                click.echo("Test [1/3]: Passed")
-                click.echo(
-                    f"Created item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
-                )
-            click.echo("Waiting 10 seconds...")
-            time.sleep(10)
-
-            # Replication
-            patch_data = {"properties": {"retracted": True}}
-            patch_result = client.patch(
-                f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
-                content=json.dumps(patch_data),
-            )
-            if patch_result.status_code >= 300:
-                click.echo("Test [2/3]: Failed")
-                raise Exception(result.content)
-            else:
-                click.echo("Test [2/3]: Passed")
-                click.echo(
-                    f"Added  node to item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
-                )
-            click.echo("Waiting 10 seconds...")
-            time.sleep(10)
-
-            # Retraction
-            remove_patch = {"properties": {"retracted": False}}
-            remove_result = client.patch(
-                f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
-                content=json.dumps(remove_patch),
-            )
-            if remove_result.status_code >= 300:
-                click.echo("Test [3/3]: Failed")
-                raise Exception(result.content)
-
-            else:
-                click.echo("Test [3/3]: Passed")
-                click.echo(
-                    f"Reomved node from item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
-                )
-
-    click.echo("Done")
-
-
-@click.command()
-def duplication_test() -> None:
-    """
-    Generate a number of ESGF items.
-
-    """
-    click.echo("Producing a STAC item to test")
-    click.echo()
-
-    data = ESGFItemFactory().batch(
-        1,
-        stac_extensions=[],
-    )
-    instance = data[0]
-
-    click.echo(instance.model_dump_json(indent=2))
-    click.echo()
-
-    with httpx.Client() as client:
-
-        client.post(
-            f"http://localhost:9050/{instance.collection}/items",
-            content=instance.model_dump_json(),
-        )
-
-        time.sleep(10)
-
-        click.echo("Creating duplicate item")
-        click.echo()
-
-        result = client.post(
-            f"http://localhost:9050/{instance.collection}/items",
-            content=instance.model_dump_json(),
-        )
-        click.echo(f"Duplicate Reponse: {result.content.decode('utf-8')}")
-
-        click.echo()
 
     click.echo("Done")
