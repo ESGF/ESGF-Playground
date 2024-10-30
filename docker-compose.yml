@@ -225,6 +225,8 @@ services:
     depends_on:
       kafka1:
         condition: service_healthy
+    env_file:
+      - .env
 
   # Central ESGF Zookeeper Server
   zoo1:

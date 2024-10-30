@@ -21,7 +21,7 @@ from esgf_playground_utils.models.kafka import (
 from fastapi import Depends, FastAPI, HTTPException
 from stac_pydantic.item import Item
 
-from .dependencies import TokenData, get_current_active_admin, get_current_active_user
+from .dependencies import TokenData, get_current_active_user
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -191,7 +191,7 @@ async def update_item(
     collection_id: str,
     item_id: str,
     item: Item,
-    current_user: TokenData = Depends(get_current_active_admin),
+    current_user: TokenData = Depends(get_current_active_user),
 ) -> Item:
     """Add UPDATE message to kafka event stream.
 
@@ -222,7 +222,7 @@ async def update_item(
 async def delete_item_hard(
     item_id: str,
     collection_id: str,
-    current_user: TokenData = Depends(get_current_active_admin),
+    current_user: TokenData = Depends(get_current_active_user),
 ) -> None:
     """Add DELETE message to kafka event stream.
 
@@ -245,7 +245,7 @@ async def partial_update(
     item_id: str,
     collection_id: str,
     item: Dict[str, Any],
-    current_user: TokenData = Depends(get_current_active_admin),
+    current_user: TokenData = Depends(get_current_active_user),
 ) -> None:
     """Add Update message to kafka event stream.
 

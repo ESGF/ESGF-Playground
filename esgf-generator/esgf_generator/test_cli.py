@@ -23,10 +23,11 @@ def get_item_details(result: Result) -> None:
     global collection_id, item_id
     output_lines = result.output.splitlines()
     for line in output_lines:
-        if "Generated item with ID" in line:
-            parts = line.split()
-            item_id = parts[4]
-            collection_id = parts[-1]
+        if "Sending" in line:
+            parts = line.split(", ")
+            item_id = parts[0].split()[1]
+            collection_id = parts[1].split()[1]
+    print(f"Item ID: {item_id}, Collection ID: {collection_id}")
 
 
 def check_elasticsearch_index(expected_properties: dict[str, Any]) -> None:
@@ -45,7 +46,7 @@ def check_elasticsearch_index(expected_properties: dict[str, Any]) -> None:
                 raise KeyError(f"Key '{keys}' not found in the document")
             current = current[k]
         if current != value:
-            f"Expected {keys} to be {value}, but got {current}"
+            raise Exception(f"Expected {keys} to be {value}, but got {current}")
 
 
 def test_add_new_item(runner: CliRunner) -> None:

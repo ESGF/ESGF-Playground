@@ -134,14 +134,10 @@ def esgf_generator(
         stac_extensions=[],
     )
     for instance in data:
-        click.echo(
-            f"Generated item with ID: {instance.id} in collection: {instance.collection}"
-        )
-        click.echo()
 
         if publish:
             click.echo(
-                f"Sending {instance.properties.instance_id} to ESGF node '{node}'"
+                f"Sending {instance.properties.instance_id}, collection: {instance.collection} to ESGF node '{node}'"
             )
             click.echo()
 
