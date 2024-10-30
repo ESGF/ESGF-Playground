@@ -65,134 +65,134 @@ services:
       kafka1:
         condition: service_healthy
 
-  # ESGF West Node FastAPI Server
-  app-elasticsearch-west:
-    container_name: stac-fastapi-es-west
-    image: esgfdeploy/stac-fastapi-elasticsearch:v1.1
-    restart: always
-    environment:
-      - STAC_FASTAPI_TITLE=Simulated ESGF West Node Index STAC interface
-      - STAC_FASTAPI_DESCRIPTION=A STAC FastAPI with an Elasticsearch backend
-      - STAC_FASTAPI_VERSION=2.1
-      - APP_HOST=0.0.0.0
-      - APP_PORT=8080
-      - RELOAD=true
-      - ENVIRONMENT=local
-      - WEB_CONCURRENCY=10
-      - ES_HOST=elasticsearch-west
-      - ES_PORT=9200
-      - ES_USE_SSL=false
-      - ES_VERIFY_CERTS=false
-      - BACKEND=elasticsearch
-    ports:
-      - "9014:8080"
-    volumes:
-      - ./esdata-west:/usr/share/elasticsearch/data
-    depends_on:
-      - elasticsearch-west
-    command: bash -c "./scripts/wait-for-it-es.sh es-container-west:9200 && python -m stac_fastapi.elasticsearch.app"
+  # # ESGF West Node FastAPI Server
+  # app-elasticsearch-west:
+  #   container_name: stac-fastapi-es-west
+  #   image: esgfdeploy/stac-fastapi-elasticsearch:v1.1
+  #   restart: always
+  #   environment:
+  #     - STAC_FASTAPI_TITLE=Simulated ESGF West Node Index STAC interface
+  #     - STAC_FASTAPI_DESCRIPTION=A STAC FastAPI with an Elasticsearch backend
+  #     - STAC_FASTAPI_VERSION=2.1
+  #     - APP_HOST=0.0.0.0
+  #     - APP_PORT=8080
+  #     - RELOAD=true
+  #     - ENVIRONMENT=local
+  #     - WEB_CONCURRENCY=10
+  #     - ES_HOST=elasticsearch-west
+  #     - ES_PORT=9200
+  #     - ES_USE_SSL=false
+  #     - ES_VERIFY_CERTS=false
+  #     - BACKEND=elasticsearch
+  #   ports:
+  #     - "9014:8080"
+  #   volumes:
+  #     - ./esdata-west:/usr/share/elasticsearch/data
+  #   depends_on:
+  #     - elasticsearch-west
+  #   command: bash -c "./scripts/wait-for-it-es.sh es-container-west:9200 && python -m stac_fastapi.elasticsearch.app"
 
-  # ESGF West Node ElasticSearch Server
-  elasticsearch-west:
-    container_name: es-container-west
-    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
-    hostname: elasticsearch-west
-    environment:
-      ES_JAVA_OPTS: -Xms512m -Xmx1g
-    volumes:
-      - ./elasticsearch/config/elasticsearch-core.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-    ports:
-      - "9202:9200"
+  # # ESGF West Node ElasticSearch Server
+  # elasticsearch-west:
+  #   container_name: es-container-west
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
+  #   hostname: elasticsearch-west
+  #   environment:
+  #     ES_JAVA_OPTS: -Xms512m -Xmx1g
+  #   volumes:
+  #     - ./elasticsearch/config/elasticsearch-core.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+  #   ports:
+  #     - "9202:9200"
 
-  # ESGF West Node STAC Browser
-  stac-browser-west:
-    container_name: stac-browser-west
-    image: esgfdeploy/stac-browser:v1
-    environment:
-      SB_catalogUrl: http://localhost:9014/
-    ports:
-      - "9015:8080"
-    depends_on:
-      - app-elasticsearch-west
+  # # ESGF West Node STAC Browser
+  # stac-browser-west:
+  #   container_name: stac-browser-west
+  #   image: esgfdeploy/stac-browser:v1
+  #   environment:
+  #     SB_catalogUrl: http://localhost:9014/
+  #   ports:
+  #     - "9015:8080"
+  #   depends_on:
+  #     - app-elasticsearch-west
 
-  # ESGF East West KAFKA Consumer
-  stac-consumer-west: # TODO build this
-    build:
-      context: esgf-consumer
-      dockerfile: Dockerfile
-    environment:
-      CONSUMER_GROUP: "esgf-west"
-      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
-      STAC_SERVER: "http://app-elasticsearch-west:8080"
-      SCRIPT: "esgf_consumer/__init__.py"
-    depends_on:
-      kafka1:
-        condition: service_healthy
+  # # ESGF East West KAFKA Consumer
+  # stac-consumer-west: # TODO build this
+  #   build:
+  #     context: esgf-consumer
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     CONSUMER_GROUP: "esgf-west"
+  #     BOOTSTRAP_SERVERS: '["kafka1:19092"]'
+  #     STAC_SERVER: "http://app-elasticsearch-west:8080"
+  #     SCRIPT: "esgf_consumer/__init__.py"
+  #   depends_on:
+  #     kafka1:
+  #       condition: service_healthy
 
-  # Secondary ESGF Node FastAPI
-  app-elasticsearch-secondary:
-    container_name: stac-fastapi-es-secondary
-    image: esgfdeploy/stac-fastapi-elasticsearch:v1.1
-    restart: always
-    environment:
-      - STAC_FASTAPI_TITLE=Simulated ESGF Secondary Index STAC interface
-      - STAC_FASTAPI_DESCRIPTION=A STAC FastAPI with an Elasticsearch backend
-      - STAC_FASTAPI_VERSION=2.1
-      - APP_HOST=0.0.0.0
-      - APP_PORT=8080
-      - RELOAD=true
-      - ENVIRONMENT=local
-      - WEB_CONCURRENCY=10
-      - ES_HOST=elasticsearch-secondary
-      - ES_PORT=9200
-      - ES_USE_SSL=false
-      - ES_VERIFY_CERTS=false
-      - BACKEND=elasticsearch
-    ports:
-      - "9012:8080"
-    volumes:
-      - ./esdata-secondary:/usr/share/elasticsearch/data
-    depends_on:
-      - elasticsearch-secondary
-    command: bash -c "./scripts/wait-for-it-es.sh es-container-secondary:9200 && python -m stac_fastapi.elasticsearch.app"
+  # # Secondary ESGF Node FastAPI
+  # app-elasticsearch-secondary:
+  #   container_name: stac-fastapi-es-secondary
+  #   image: esgfdeploy/stac-fastapi-elasticsearch:v1.1
+  #   restart: always
+  #   environment:
+  #     - STAC_FASTAPI_TITLE=Simulated ESGF Secondary Index STAC interface
+  #     - STAC_FASTAPI_DESCRIPTION=A STAC FastAPI with an Elasticsearch backend
+  #     - STAC_FASTAPI_VERSION=2.1
+  #     - APP_HOST=0.0.0.0
+  #     - APP_PORT=8080
+  #     - RELOAD=true
+  #     - ENVIRONMENT=local
+  #     - WEB_CONCURRENCY=10
+  #     - ES_HOST=elasticsearch-secondary
+  #     - ES_PORT=9200
+  #     - ES_USE_SSL=false
+  #     - ES_VERIFY_CERTS=false
+  #     - BACKEND=elasticsearch
+  #   ports:
+  #     - "9012:8080"
+  #   volumes:
+  #     - ./esdata-secondary:/usr/share/elasticsearch/data
+  #   depends_on:
+  #     - elasticsearch-secondary
+  #   command: bash -c "./scripts/wait-for-it-es.sh es-container-secondary:9200 && python -m stac_fastapi.elasticsearch.app"
 
   # Secondary ESGF Node ElasticSearch Server
-  elasticsearch-secondary:
-    container_name: es-container-secondary
-    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
-    hostname: elasticsearch-secondary
-    environment:
-      ES_JAVA_OPTS: -Xms512m -Xmx1g
-    volumes:
-      - ./elasticsearch/config/elasticsearch-secondary.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-    ports:
-      - "9201:9200"
+  # elasticsearch-secondary:
+  #   container_name: es-container-secondary
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTICSEARCH_VERSION:-8.11.0}
+  #   hostname: elasticsearch-secondary
+  #   environment:
+  #     ES_JAVA_OPTS: -Xms512m -Xmx1g
+  #   volumes:
+  #     - ./elasticsearch/config/elasticsearch-secondary.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+  #   ports:
+  #     - "9201:9200"
 
-  # Secondary ESGF Node STAC Browser
-  stac-browser-secondary:
-    container_name: stac-browser
-    image: esgfdeploy/stac-browser:v1
-    environment:
-      SB_catalogUrl: http://localhost:9012/
-    ports:
-      - "9013:8080"
-    depends_on:
-      - app-elasticsearch-secondary
+  # # Secondary ESGF Node STAC Browser
+  # stac-browser-secondary:
+  #   container_name: stac-browser
+  #   image: esgfdeploy/stac-browser:v1
+  #   environment:
+  #     SB_catalogUrl: http://localhost:9012/
+  #   ports:
+  #     - "9013:8080"
+  #   depends_on:
+  #     - app-elasticsearch-secondary
 
-  # Secondary ESGF Node KAFKA Consumer
-  stac-consumer-secondary: # TODO build this
-    build:
-      context: esgf-consumer
-      dockerfile: Dockerfile
-    environment:
-      CONSUMER_GROUP: "secondary-node"
-      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
-      KAFKA_TOPICS: '.*\.historical\..*'
-      STAC_SERVER: "http://app-elasticsearch-secondary:8080"
-      SCRIPT: "esgf_consumer/__init__.py"
-    depends_on:
-      kafka1:
-        condition: service_healthy
+  # # Secondary ESGF Node KAFKA Consumer
+  # stac-consumer-secondary: # TODO build this
+  #   build:
+  #     context: esgf-consumer
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     CONSUMER_GROUP: "secondary-node"
+  #     BOOTSTRAP_SERVERS: '["kafka1:19092"]'
+  #     KAFKA_TOPICS: '.*\.historical\..*'
+  #     STAC_SERVER: "http://app-elasticsearch-secondary:8080"
+  #     SCRIPT: "esgf_consumer/__init__.py"
+  #   depends_on:
+  #     kafka1:
+  #       condition: service_healthy
 
   # ESGF East Ingestion API Server
   transaction_api_east:
@@ -208,21 +208,23 @@ services:
     depends_on:
       kafka1:
         condition: service_healthy
+    env_file:
+    - .env
 
-  # ESGF West Ingestion API Server
-  transaction_api_west:
-    build:
-      context: esgf-transaction-api
-      dockerfile: Dockerfile
-    environment:
-      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
-    ports:
-      - "9051:8000"
-    volumes:
-    - ./esgf-transaction-api:/opt/esgf-transaction-api
-    depends_on:
-      kafka1:
-        condition: service_healthy
+  # # ESGF West Ingestion API Server
+  # transaction_api_west:
+  #   build:
+  #     context: esgf-transaction-api
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     BOOTSTRAP_SERVERS: '["kafka1:19092"]'
+  #   ports:
+  #     - "9051:8000"
+  #   volumes:
+  #   - ./esgf-transaction-api:/opt/esgf-transaction-api
+  #   depends_on:
+  #     kafka1:
+  #       condition: service_healthy
 
   # Central ESGF Zookeeper Server
   zoo1:
@@ -375,46 +377,79 @@ services:
       service: conduktor-console
       file: conduktor.yml
 
-  mongo:
-    image: mongo
-    container_name: mongo
+  # mongo:
+  #   image: mongo
+  #   container_name: mongo
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: root
+  #     MONGO_INITDB_ROOT_PASSWORD: example
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongo_data:/data/db
+
+  # mongo-express:
+  #   image: mongo-express
+  #   container_name: mongo-express
+  #   environment:
+  #     ME_CONFIG_MONGODB_ADMINUSERNAME: root
+  #     ME_CONFIG_MONGODB_ADMINPASSWORD: example
+  #     ME_CONFIG_MONGODB_SERVER: mongo
+  #     ME_CONFIG_BASICAUTH: "false"
+  #   ports:
+  #     - "8085:8081"
+
+  # mongo-consumer:
+  #   build:
+  #     context: esgf-consumer
+  #     dockerfile: Dockerfile
+  #   depends_on:
+  #     kafka1:
+  #       condition: service_healthy
+  #     mongo:
+  #       condition: service_started
+  #   environment:
+  #     BOOTSTRAP_SERVERS: '["kafka1:19092"]'
+  #     MONGO_URI: mongodb://root:example@mongo:27017/
+  #     MONGODB_DATABASE: esgf_playground_db
+  #     MONGODB_COLLECTION: esgf_data_collection
+  #     SCRIPT: "esgf_consumer/mongo_consumer.py"
+
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    hostname: keycloakdb
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-    ports:
-      - "27017:27017"
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=password
     volumes:
-      - mongo_data:/data/db
+      - postgres:/var/lib/postgresql/data
 
-  mongo-express:
-    image: mongo-express
-    container_name: mongo-express
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: example
-      ME_CONFIG_MONGODB_SERVER: mongo
-      ME_CONFIG_BASICAUTH: "false"
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
+    container_name: keycloak
     ports:
-      - "8085:8081"
-
-  mongo-consumer:
-    build:
-      context: esgf-consumer
-      dockerfile: Dockerfile
-    depends_on:
-      kafka1:
-        condition: service_healthy
-      mongo:
-        condition: service_started
+      - 8086:8086
     environment:
-      BOOTSTRAP_SERVERS: '["kafka1:19092"]'
-      MONGO_URI: mongodb://root:example@mongo:27017/
-      MONGODB_DATABASE: esgf_playground_db
-      MONGODB_COLLECTION: esgf_data_collection
-      SCRIPT: "esgf_consumer/mongo_consumer.py"
+      - KEYCLOAK_IMPORT=/tmp/keycloak-realm.json
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HTTP_PORT=8086
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloakdb:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=password
+    volumes:
+      - ./keycloak/keycloak-realm.json:/tmp/keycloak-realm.json
+    command: start-dev --import-realm
+    depends_on:
+      - postgres
 
 
 volumes:
   pg_data: {}
   conduktor_data: {}
   mongo_data: {}
+  postgres: {}

@@ -18,8 +18,10 @@ from esgf_playground_utils.models.kafka import (
     RevokePayload,
     UpdatePayload,
 )
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from stac_pydantic.item import Item
+
+from .dependencies import TokenData, get_current_active_admin, get_current_active_user
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -161,7 +163,11 @@ async def partial_update_item(
 
 
 @app.post("/{collection_id}/items", status_code=202)
-async def create_item(collection_id: str, item: Item) -> Item:
+async def create_item(
+    collection_id: str,
+    item: Item,
+    current_user: TokenData = Depends(get_current_active_user),
+) -> Item:
     """Add CREATE message to kafka event stream.
 
     Args:
@@ -174,18 +180,19 @@ async def create_item(collection_id: str, item: Item) -> Item:
     logger.info("Creating %s item", collection_id)
     if await check_duplicate_item(collection_id, item.id):
         raise HTTPException(status_code=409, detail="Item already exists")
-    else:
-        if isinstance(item, Item):
-            await post_item(collection_id, item)
-        else:
-            for i in item:
-                await post_item(collection_id, i)
 
-        return item
+    await post_item(collection_id, item)
+
+    return item
 
 
 @app.put("/{collection_id}/items/{item_id}")
-async def update_item(collection_id: str, item_id: str, item: Item) -> Item:
+async def update_item(
+    collection_id: str,
+    item_id: str,
+    item: Item,
+    current_user: TokenData = Depends(get_current_active_admin),
+) -> Item:
     """Add UPDATE message to kafka event stream.
 
     Args:
@@ -212,7 +219,11 @@ async def update_item(collection_id: str, item_id: str, item: Item) -> Item:
 
 
 @app.delete("/{collection_id}/items/{item_id}")
-async def delete_item_hard(item_id: str, collection_id: str) -> None:
+async def delete_item_hard(
+    item_id: str,
+    collection_id: str,
+    current_user: TokenData = Depends(get_current_active_admin),
+) -> None:
     """Add DELETE message to kafka event stream.
 
     Args:
@@ -231,7 +242,10 @@ async def delete_item_hard(item_id: str, collection_id: str) -> None:
 
 @app.patch("/{collection_id}/items/{item_id}")
 async def partial_update(
-    item_id: str, collection_id: str, item: Dict[str, Any]
+    item_id: str,
+    collection_id: str,
+    item: Dict[str, Any],
+    current_user: TokenData = Depends(get_current_active_admin),
 ) -> None:
     """Add Update message to kafka event stream.
 

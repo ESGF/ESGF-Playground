@@ -13,6 +13,7 @@ click = "^8.1.7"
 esgf-playground-utils = "^0.3.0"
 pytest = "^8.3.3"
 elasticsearch = "^8.15.1"
+python-jose = "^3.3.0"
 
 
 [tool.poetry.group.black.dependencies]
@@ -42,6 +43,7 @@ xenon = "^0.9.1"
 esgf_generator = "esgf_generator.cli:esgf_generator"
 esgf_update = "esgf_generator.cli:esgf_update"
 esgf_delete = "esgf_generator.cli:esgf_delete"
+logout = "esgf_generator.cli:logout"
 
 [tool.mypy]
 plugins = [

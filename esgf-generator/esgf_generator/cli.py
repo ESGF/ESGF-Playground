@@ -1,15 +1,81 @@
 import json
+import os
 import random
 import time
 from typing import Any, Dict, Literal
 
 import click
 import httpx
+from dotenv import find_dotenv, load_dotenv, set_key, unset_key
 from esgf_playground_utils.models.item import ESGFItem
+from jose import JWTError, jwt
 
 from esgf_generator import ESGFItemFactory
 
 NODE_PORTS = {"east": 9050, "west": 9051}
+ENV_FILE = find_dotenv()
+
+if ENV_FILE is None:
+    raise Exception("No .env file found, please create one in the root directory")
+
+load_dotenv(ENV_FILE)
+
+PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveFnjy2OFhKckLFyzczxCjoWq96nGTlrfWz2U4J+e8u0iHEmVaSfVDD5AG02UGNEk9TfMLuaONZjeM2w4OHYzFNaPxEmobthOcJHAsrpRwT3w4JHLEYSFVRQG8HdKha9e9qUublJVwsxFqVgPPgPK0PJpy9MSc48EMp4GbGBx9Hit9tFEIS9VPZ8BVPVm04bxOdXky/aFLsUOTS2V2FY98ABMQ8TKnbZBdXAFUnk0L3TZfkmNnvfKvUJzes79846MZKF4gVEJJ8vnD9a+u4IaMSecFCF17SEB50QMoawn3GXCK3ppZE1QIDAQAB
+-----END PUBLIC KEY-----"""
+
+
+def validate_token() -> bool:
+    token = os.getenv("TOKEN")
+    if not token:
+        return False
+
+    try:
+        jwt.decode(
+            token,
+            PUBLIC_KEY,
+            algorithms=["RS256"],
+            audience="ec404039-07b4-4a4f-97eb-e0accf60ee76",
+        )
+        return True
+    except JWTError:
+        return False
+
+
+def authenticate() -> str:
+
+    token = os.getenv("TOKEN")
+    if token and validate_token():
+        return token
+
+    username = click.prompt("Username")
+    password = click.prompt("Password", hide_input=True)
+    click.echo()
+
+    url = "http://localhost:8086/realms/ESGF-Playground/protocol/openid-connect/token"
+    data = {
+        "grant_type": "password",
+        "client_id": "esgf_client",
+        "client_secret": os.getenv("CLIENT_SECRET"),
+        "username": username,
+        "password": password,
+    }
+
+    response = httpx.post(url, data=data)
+
+    if response.status_code == 200:
+        token = response.json().get("access_token")
+
+        if token is None:
+            click.echo("Failed to retrieve token: Logout and try again")
+            exit(1)
+
+        set_key(ENV_FILE, "TOKEN", token)
+        return token
+    else:
+        click.echo()
+        click.echo("Authentication Failed")
+        exit(1)
 
 
 def update_topic(item: ESGFItem, item_id: str, collection_id: str) -> ESGFItem:
@@ -58,6 +124,8 @@ def esgf_generator(
 
     COUNT is the number of items to generate.
     """
+    token = authenticate()
+
     click.echo(f"Producing {count} STAC records")
     click.echo()
 
@@ -69,6 +137,7 @@ def esgf_generator(
         click.echo(
             f"Generated item with ID: {instance.id} in collection: {instance.collection}"
         )
+        click.echo()
 
         if publish:
             click.echo(
@@ -79,22 +148,25 @@ def esgf_generator(
             with httpx.Client() as client:
                 result = client.post(
                     f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
+                    headers={"Authorization": f"Bearer {token}"},
                     content=instance.model_dump_json(),
                 )
-                click.echo(f"Response code: {result.status_code}")
                 click.echo()
-                if result.status_code >= 300:
+
+                if result.status_code == 401:
+                    click.echo("You are not Authorised")
+                elif result.status_code == 403:
+                    click.echo("Not enough permissions")
+                elif result.status_code >= 300:
                     raise Exception(result.content)
+                else:
+                    click.echo(instance.model_dump_json(indent=2))
 
-        click.echo(instance.model_dump_json(indent=2))
-
-        if delay:
-            click.echo("Pausing for random sub-second time")
-            time.sleep(random.random())
-
-        click.echo()
-
-    click.echo("Done")
+                    if delay:
+                        click.echo("Pausing for random sub-second time")
+                        time.sleep(random.random())
+                        click.echo()
+                        click.echo("Done")
 
 
 @click.command()
@@ -126,6 +198,8 @@ def esgf_update(
     ITEM_ID is the identifier of the item to update.
     """
 
+    token = authenticate()
+
     data = ESGFItemFactory().batch(
         1,
         stac_extensions=[],
@@ -147,6 +221,7 @@ def esgf_update(
 
                 result = client.patch(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    headers={"Authorization": f"Bearer {token}"},
                     content=json.dumps(partial_update_data),
                 )
 
@@ -155,13 +230,18 @@ def esgf_update(
                 click.echo()
                 result = client.put(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    headers={"Authorization": f"Bearer {token}"},
                     content=item.model_dump_json(),
                 )
-            click.echo(f"Response code: {result.status_code}")
-            if result.status_code >= 300:
+            if result.status_code == 401:
+                click.echo("You are not Authorised")
+            elif result.status_code == 403:
+                click.echo("Not enough permissions")
+            elif result.status_code >= 300:
                 raise Exception(result.content)
-
-    click.echo("Done")
+            else:
+                click.echo()
+                click.echo("Done")
 
 
 @click.command()
@@ -191,6 +271,8 @@ def esgf_delete(
     COLLECTION_ID is the identifier of the collection that contains the item.
     ITEM_ID is the identifier of the item to update.
     """
+    token = authenticate()
+
     click.echo(f"Deleting item {item_id} in collection {collection_id}")
     click.echo()
 
@@ -198,7 +280,8 @@ def esgf_delete(
         with httpx.Client() as client:
             if hard:
                 result = client.delete(
-                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
+                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    headers={"Authorization": f"Bearer {token}"},
                 )
             else:
                 click.echo("Soft deleting item")
@@ -207,10 +290,27 @@ def esgf_delete(
                 content = {"properties": {"retracted": True}}
                 result = client.patch(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    headers={"Authorization": f"Bearer {token}"},
                     content=json.dumps(content),
                 )
-            click.echo(f"Response code: {result.status_code}")
-            if result.status_code >= 300:
+            if result.status_code == 401:
+                click.echo("You are not Authorised")
+            elif result.status_code == 403:
+                click.echo("Not enough permissions")
+            elif result.status_code >= 300:
                 raise Exception(result.content)
+            else:
+                click.echo()
+                click.echo("Done")
 
-    click.echo("Done")
+
+@click.command()
+def logout() -> None:
+    token = os.getenv("TOKEN")
+    if token:
+        unset_key(ENV_FILE, "TOKEN")
+        click.echo()
+        click.echo("Logged out")
+    else:
+        click.echo()
+        click.echo("Not logged in")
