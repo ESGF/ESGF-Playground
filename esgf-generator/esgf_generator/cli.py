@@ -6,9 +6,9 @@ from typing import Any, Dict, Literal
 
 import click
 import httpx
+import jwt
 from dotenv import find_dotenv, load_dotenv, set_key, unset_key
 from esgf_playground_utils.models.item import ESGFItem
-from jose import JWTError, jwt
 
 from esgf_generator import ESGFItemFactory
 
@@ -38,7 +38,7 @@ def validate_token() -> bool:
             audience="ec404039-07b4-4a4f-97eb-e0accf60ee76",
         )
         return True
-    except JWTError:
+    except jwt.PyJWTError:
         return False
 
 

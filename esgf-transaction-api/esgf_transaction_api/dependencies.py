@@ -1,13 +1,14 @@
 import os
 from typing import Optional
 
-from dotenv import load_dotenv
+import jwt
+from dotenv import find_dotenv, load_dotenv
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer
-from jose import JWTError, jwt
 from pydantic import BaseModel
 
-ENV_FILE = os.path.join(os.path.dirname(__file__), ".env")
+ENV_FILE = find_dotenv()
+
 load_dotenv(ENV_FILE)
 
 
@@ -15,8 +16,10 @@ PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveFnjy2OFhKckLFyzczxCjoWq96nGTlrfWz2U4J+e8u0iHEmVaSfVDD5AG02UGNEk9TfMLuaONZjeM2w4OHYzFNaPxEmobthOcJHAsrpRwT3w4JHLEYSFVRQG8HdKha9e9qUublJVwsxFqVgPPgPK0PJpy9MSc48EMp4GbGBx9Hit9tFEIS9VPZ8BVPVm04bxOdXky/aFLsUOTS2V2FY98ABMQ8TKnbZBdXAFUnk0L3TZfkmNnvfKvUJzes79846MZKF4gVEJJ8vnD9a+u4IaMSecFCF17SEB50QMoawn3GXCK3ppZE1QIDAQAB
 -----END PUBLIC KEY-----"""
 
+TOKEN_URL = os.getenv("TOKEN_URL")
 
-TOKEN_URL = "http://localhost:8086/realms/ESGF-Playground/protocol/openid-connect/token"
+if not TOKEN_URL:
+    raise Exception("TOKEN_URL is not set")
 
 
 class TokenData(BaseModel):
@@ -43,7 +46,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
         roles: list[str] = payload.get("realm_access", {}).get("roles", [])
         token_data = TokenData(username=username, roles=roles)
 
-    except JWTError:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     return token_data

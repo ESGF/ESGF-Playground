@@ -13,7 +13,8 @@ click = "^8.1.7"
 esgf-playground-utils = "^0.3.0"
 pytest = "^8.3.3"
 elasticsearch = "^8.15.1"
-python-jose = "^3.3.0"
+pyjwt = "^2.9.0"
+cryptography = "^43.0.3"
 
 
 [tool.poetry.group.black.dependencies]
