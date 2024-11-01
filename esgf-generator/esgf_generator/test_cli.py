@@ -1,5 +1,5 @@
 import time
-from typing import Any
+from typing import Any, Generator
 
 import pytest
 from click.testing import CliRunner, Result
