@@ -15,6 +15,7 @@ from esgf_generator import ESGFItemFactory
 NODE_PORTS = {"east": 9050, "west": 9051}
 ENV_FILE = find_dotenv()
 
+
 if ENV_FILE is None:
     raise Exception("No .env file found, please create one in the root directory")
 
@@ -26,6 +27,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveF
 
 
 def validate_token() -> bool:
+    load_dotenv(ENV_FILE)
     token = os.getenv("TOKEN")
     if not token:
         return False
@@ -43,6 +45,7 @@ def validate_token() -> bool:
 
 
 def authenticate() -> str:
+    load_dotenv(ENV_FILE)
 
     token = os.getenv("TOKEN")
     if token and validate_token():
@@ -153,8 +156,11 @@ def esgf_generator(
                     click.echo("You are not Authorised")
                 elif result.status_code == 403:
                     click.echo("Not enough permissions")
+                elif result.status_code == 409:
+                    click.echo("Item already exists")
                 elif result.status_code >= 300:
                     raise Exception(result.content)
+
                 else:
                     click.echo(instance.model_dump_json(indent=2))
 
@@ -210,10 +216,10 @@ def esgf_update(
     if publish:
         with httpx.Client() as client:
             if partial_update_data:
+                click.echo()
                 click.echo(
                     f"Partially updating item {item_id} in collection {collection_id}"
                 )
-                click.echo()
 
                 result = client.patch(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
@@ -222,19 +228,23 @@ def esgf_update(
                 )
 
             else:
-                click.echo(f"Updating item {item_id} in collection {collection_id}")
                 click.echo()
+                click.echo(f"Updating item {item_id} in collection {collection_id}")
                 result = client.put(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
                     headers={"Authorization": f"Bearer {token}"},
                     content=item.model_dump_json(),
                 )
+
             if result.status_code == 401:
                 click.echo("You are not Authorised")
             elif result.status_code == 403:
                 click.echo("Not enough permissions")
+            elif result.status_code == 409:
+                click.echo("Cannot update non-existent item")
             elif result.status_code >= 300:
                 raise Exception(result.content)
+
             else:
                 click.echo()
                 click.echo("Done")
@@ -289,12 +299,16 @@ def esgf_delete(
                     headers={"Authorization": f"Bearer {token}"},
                     content=json.dumps(content),
                 )
+
             if result.status_code == 401:
                 click.echo("You are not Authorised")
             elif result.status_code == 403:
                 click.echo("Not enough permissions")
+            elif result.status_code == 409:
+                click.echo("Cannot delete non-existent item")
             elif result.status_code >= 300:
                 raise Exception(result.content)
+
             else:
                 click.echo()
                 click.echo("Done")

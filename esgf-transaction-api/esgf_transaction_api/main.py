@@ -21,7 +21,7 @@ from esgf_playground_utils.models.kafka import (
 from fastapi import Depends, FastAPI, HTTPException
 from stac_pydantic.item import Item
 
-from .dependencies import TokenData, get_current_active_user
+from .keycloak import TokenData, get_current_active_admin, get_current_active_user
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -50,7 +50,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
 app = FastAPI(lifespan=lifespan)
 
 
-async def check_duplicate_item(collection_id: str, item_id: str) -> bool:
+async def check_item_exists(collection_id: str, item_id: str) -> bool:
     stac_url = (
         f"http://stac-fastapi-es-east:8080/collections/{collection_id}/items/{item_id}"
     )
@@ -178,7 +178,7 @@ async def create_item(
         Optional[stac_types.Item]: The item, or `None` if the item was successfully deleted.
     """
     logger.info("Creating %s item", collection_id)
-    if await check_duplicate_item(collection_id, item.id):
+    if await check_item_exists(collection_id, item.id):
         raise HTTPException(status_code=409, detail="Item already exists")
 
     await post_item(collection_id, item)
@@ -209,6 +209,8 @@ async def update_item(
 
     """
     logger.info("Updating %s item", collection_id)
+    if not await check_item_exists(collection_id, item_id):
+        raise HTTPException(status_code=409, detail="Cannot update non-existent item")
 
     try:
         await modify_item(collection_id, item, item_id)
@@ -222,7 +224,7 @@ async def update_item(
 async def delete_item_hard(
     item_id: str,
     collection_id: str,
-    current_user: TokenData = Depends(get_current_active_user),
+    current_user: TokenData = Depends(get_current_active_admin),
 ) -> None:
     """Add DELETE message to kafka event stream.
 
@@ -235,6 +237,8 @@ async def delete_item_hard(
     """
     logger.info("Deleting %s item", collection_id)
 
+    if not await check_item_exists(collection_id, item_id):
+        raise HTTPException(status_code=409, detail="Cannot delete non-existent item")
     await revoke_item_hard(collection_id, item_id)
 
     return None
@@ -259,6 +263,8 @@ async def partial_update(
     """
     logger.info("Updating %s item", collection_id)
 
+    if not await check_item_exists(collection_id, item_id):
+        raise HTTPException(status_code=409, detail="Cannot update non-existent item")
     await partial_update_item(collection_id, item_id, item)
 
     return None
