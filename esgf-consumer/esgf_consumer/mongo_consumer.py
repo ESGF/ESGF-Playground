@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import traceback
-from typing import Any
+from typing import Any, Dict
 
 from aiokafka.errors import KafkaError
 from consumers import get_consumer
@@ -25,7 +25,9 @@ async def consume_to_mongo(settings: Settings) -> None:
     logger.critical("Consumer started.")
 
     logger.critical("Connecting to MongoDB...")
-    client: MongoClient[Any] = MongoClient("mongodb://root:example@mongo:27017/")
+    client: MongoClient[Dict[str, Any]] = MongoClient(
+        "mongodb://root:example@mongo:27017/"
+    )
     db = client["esgf_playground_db"]
     collection = db["esgf_data_collection"]
     logger.critical("Connected to MongoDB.")

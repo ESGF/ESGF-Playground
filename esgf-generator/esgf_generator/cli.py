@@ -242,7 +242,6 @@ def esgf_update(
                 click.echo("Cannot update non-existent item")
             elif result.status_code >= 300:
                 raise Exception(result.content)
-
             else:
                 click.echo("Done")
 

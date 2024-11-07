@@ -221,7 +221,10 @@ async def revoke_item_hard(
 
 
 async def partial_update_item(
-    collection_id: str, item_id: str, item: Dict[str, Any], token_data: TokenData
+    collection_id: str,
+    item_id: str,
+    item: Dict[str, Any],
+    token_data: TokenData,
 ) -> None:
     payload = PartialUpdatePayload(
         method="PATCH", collection_id=collection_id, item=item, item_id=item_id

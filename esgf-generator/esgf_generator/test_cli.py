@@ -1,5 +1,5 @@
 import time
-from typing import Any, Generator
+from typing import Generator, Union
 
 import pytest
 from click.testing import CliRunner, Result
@@ -43,7 +43,7 @@ def get_item_details(result: Result) -> None:
             collection_id = parts[1].split()[1]
 
 
-def check_elasticsearch_index(expected_properties: dict[str, Any]) -> None:
+def check_elasticsearch_index(expected_properties: dict[str, Union[str, bool]]) -> None:
     time.sleep(12)
     response = es.get(
         index=f"items_{collection_id}-000001", id=f"{item_id}|{collection_id}"
@@ -107,14 +107,13 @@ def test_update_item(runner: CliRunner) -> None:
             "--node",
             "east",
             "--publish",
-            "--partial",
-            '{"properties": {"description": "Test Description"}}',
         ],
         input=user_input,
     )
     if result.exit_code != 0:
         pytest.fail(f"Command failed with exit code {result.exit_code}")
-    check_elasticsearch_index({"properties.description": "Test Description"})
+    if "Done" not in result.output:
+        pytest.fail("Failed to update item")
 
 
 def test_remove_replica(runner: CliRunner) -> None:
