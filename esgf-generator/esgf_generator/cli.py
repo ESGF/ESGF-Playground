@@ -64,7 +64,7 @@ def authenticate() -> str:
         "password": password,
     }
 
-    response = httpx.post(url, data=data)
+    response = httpx.post(url, data=data, timeout=5.0)
 
     if response.status_code == 200:
         token = response.json().get("access_token")
@@ -142,7 +142,7 @@ def esgf_generator(
             click.echo(
                 f"Sending {instance.properties.instance_id}, collection: {instance.collection} to ESGF node '{node}'"
             )
-            with httpx.Client() as client:
+            with httpx.Client(timeout=5.0) as client:
                 result = client.post(
                     f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
                     headers={"Authorization": f"Bearer {token}"},
@@ -211,7 +211,7 @@ def esgf_update(
     item = update_topic(item, item_id, collection_id)
 
     if publish:
-        with httpx.Client() as client:
+        with httpx.Client(timeout=5) as client:
             if partial_update_data:
                 click.echo()
                 click.echo(
@@ -280,7 +280,7 @@ def esgf_delete(
     click.echo(f"Deleting item {item_id} in collection {collection_id}")
 
     if publish:
-        with httpx.Client() as client:
+        with httpx.Client(timeout=5.0) as client:
             if hard:
                 result = client.delete(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",

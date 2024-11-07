@@ -55,10 +55,10 @@ def check_elasticsearch_index(expected_properties: dict[str, Any]) -> None:
         current = source
         for k in keys:
             if k not in current:
-                raise KeyError(f"Key '{keys}' not found in the document")
+                pytest.fail(f"Key '{keys}' not found in the document")
             current = current[k]
         if current != value:
-            raise Exception(f"Expected {keys} to be {value}, but got {current}")
+            pytest.fail(f"Expected {keys} to be {value}, but got {current}")
 
 
 def test_add_new_item(runner: CliRunner) -> None:
@@ -70,7 +70,7 @@ def test_add_new_item(runner: CliRunner) -> None:
     time.sleep(15)
 
     if result.exit_code != 0:
-        raise RuntimeError(f"Command failed with exit code {result.exit_code}")
+        pytest.fail(f"Command failed with exit code {result.exit_code}")
     get_item_details(result)
     check_elasticsearch_index({"properties.title": f"{item_id}"})
 
@@ -92,7 +92,7 @@ def test_add_replica(runner: CliRunner) -> None:
         input=user_input,
     )
     if result.exit_code != 0:
-        raise RuntimeError(f"Command failed with exit code {result.exit_code}")
+        pytest.fail(f"Command failed with exit code {result.exit_code}")
     check_elasticsearch_index({"properties.Replica": "Node 1"})
 
 
@@ -113,7 +113,7 @@ def test_update_item(runner: CliRunner) -> None:
         input=user_input,
     )
     if result.exit_code != 0:
-        raise RuntimeError(f"Command failed with exit code {result.exit_code}")
+        pytest.fail(f"Command failed with exit code {result.exit_code}")
     check_elasticsearch_index({"properties.description": "Test Description"})
 
 
@@ -133,7 +133,7 @@ def test_remove_replica(runner: CliRunner) -> None:
         input=user_input,
     )
     if result.exit_code != 0:
-        raise RuntimeError(f"Command failed with exit code {result.exit_code}")
+        pytest.fail(f"Command failed with exit code {result.exit_code}")
     check_elasticsearch_index({"properties.retracted": True})
 
 
@@ -146,10 +146,10 @@ def test_remove_item(runner: CliRunner) -> None:
         input=user_input,
     )
     if result.exit_code != 0:
-        raise RuntimeError(f"Command failed with exit code {result.exit_code}")
+        pytest.fail(f"Command failed with exit code {result.exit_code}")
     response = es.exists(index="item_{collection_id}-000001", id=item_id)
     if response:
-        raise ValueError("Document still exists after deletion")
+        pytest.fail("Document still exists after deletion")
 
 
 def test_delete_non_existent_item(runner: CliRunner) -> None:
@@ -161,7 +161,8 @@ def test_delete_non_existent_item(runner: CliRunner) -> None:
         input=user_input,
     )
 
-    assert "Cannot delete non-existent item" in result.output
+    if "Cannot delete non-existent item" not in result.output:
+        pytest.fail("Expected 'Cannot delete non-existent item' in output")
 
 
 def test_update_non_existent_item(runner: CliRunner) -> None:
@@ -180,4 +181,6 @@ def test_update_non_existent_item(runner: CliRunner) -> None:
         ],
         input=user_input,
     )
-    assert "Cannot update non-existent item" in result.output
+
+    if "Cannot update non-existent item" not in result.output:
+        pytest.fail("Expected 'Cannot update non-existent item' in output")
