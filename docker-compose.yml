@@ -379,6 +379,7 @@ services:
       service: conduktor-console
       file: conduktor.yml
 
+  # MongoDB Database Server
   mongo:
     image: mongo
     container_name: mongo
@@ -390,6 +391,7 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  # Mongo Express Web Interface
   mongo-express:
     image: mongo-express
     container_name: mongo-express
@@ -401,6 +403,7 @@ services:
     ports:
       - "8085:8081"
 
+  # MongoDB Kafka Consumer
   mongo-consumer:
     build:
       context: esgf-consumer
@@ -417,7 +420,7 @@ services:
       MONGODB_COLLECTION: esgf_data_collection
       SCRIPT: "esgf_consumer/mongo_consumer.py"
 
-
+  # PostgreSQL Database for Keycloak
   postgres:
     image: postgres:15
     container_name: postgres
@@ -429,6 +432,7 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data
 
+  # Keycloak Identity and Access Management Server
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.0
     container_name: keycloak

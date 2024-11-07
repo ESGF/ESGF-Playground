@@ -1,14 +1,16 @@
 import logging
+import os
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple, Union
 
 import aiokafka
 import httpx
 from esgf_playground_utils.config.kafka import Settings
 from esgf_playground_utils.models.kafka import (
     Auth,
+    AuthData,
     CreatePayload,
     Data,
     KafkaEvent,
@@ -34,6 +36,8 @@ logger.addHandler(stream_handler)
 settings = Settings()
 producer: Optional[aiokafka.AIOKafkaProducer] = None
 
+TOKEN = os.getenv("TOKEN")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
@@ -55,7 +59,7 @@ async def check_item_exists(collection_id: str, item_id: str) -> bool:
         f"http://stac-fastapi-es-east:8080/collections/{collection_id}/items/{item_id}"
     )
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             response = await client.get(stac_url)
             if response.status_code == 200 or response.status_code == 202:
@@ -73,11 +77,71 @@ async def check_item_exists(collection_id: str, item_id: str) -> bool:
             return False
 
 
+def create_auth_basis_data(
+    token_data: TokenData,
+) -> Dict[str, Union[str, List[Dict[str, str]]]]:
+    def replace_none(value: Optional[str]) -> str:
+        return value if value is not None else "null"
+
+    authorization_basis: List[Dict[str, str]] = []
+
+    for role in token_data.roles or []:
+        authorization_basis.append(
+            {
+                "role": replace_none(role),
+                "member_id": replace_none(token_data.sub),
+                "member_name": replace_none(token_data.name),
+            }
+        )
+
+    auth_basis_data: Dict[str, Union[str, List[Dict[str, str]]]] = {
+        "authorization_basis_type": "role",
+        "authorization_basis_service": "keycloak",
+        "authorization_basis": authorization_basis,
+    }
+
+    return auth_basis_data
+
+
+def create_requester_data(token_data: TokenData) -> Dict[str, str]:
+    return {
+        "auth_service": "auth.esgf-playground",
+        "sub": token_data.sub or "null",
+        "username": token_data.username or "null",
+        "name": token_data.name or "null",
+        "email": token_data.email or "null",
+        "identity_provider": "null",
+        "identity_provider_display_name": "null",
+    }
+
+
+def auth_item_body(token_data: TokenData) -> Tuple[Dict[str, str], Dict[str, Any]]:
+    auth_basis_data = create_auth_basis_data(token_data)
+    requester_data = create_requester_data(token_data)
+    return requester_data, auth_basis_data
+
+
 def item_body(
-    payload: Union[RevokePayload, UpdatePayload, CreatePayload, PartialUpdatePayload]
+    payload: Union[RevokePayload, UpdatePayload, CreatePayload, PartialUpdatePayload],
+    token_data: TokenData,
 ) -> KafkaEvent:
+
+    requester_data, auth_basis_data = auth_item_body(token_data)
+
+    if isinstance(payload, CreatePayload):
+        auth = AuthData(
+            auth_policy_id="esgf-generator",
+            target_data={
+                "collection_id": payload.collection_id,
+                "item_id": payload.item.id,
+            },
+            requester_data=requester_data,
+            auth_basis_data=auth_basis_data,
+        )
+    else:
+        auth = Auth(client_id="esgf-generator", server="docker-compose-local")
+
     data = Data(type="STAC", version="1.0.0", payload=payload)
-    auth = Auth(client_id="esgf-generator", server="docker-compose-local")
     publisher = Publisher(package="esgf-generator", version="0.1.0")
     metadata = Metadata(
         auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0"
@@ -130,35 +194,39 @@ async def alternate_message(event: KafkaEvent) -> None:
         raise HTTPException(status_code=500, detail=repr(exc)) from exc
 
 
-async def post_item(collection_id: str, item: Item) -> None:
+async def post_item(collection_id: str, item: Item, token_data: TokenData) -> None:
     payload = CreatePayload(method="POST", collection_id=collection_id, item=item)
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await post_message(event)
 
 
-async def modify_item(collection_id: str, item: Item, item_id: str) -> None:
+async def modify_item(
+    collection_id: str, item: Item, item_id: str, token_data: TokenData
+) -> None:
     payload = UpdatePayload(
         method="PUT", collection_id=collection_id, item=item, item_id=item_id
     )
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await post_message(event)
 
 
-async def revoke_item_hard(collection_id: str, item_id: str) -> None:
+async def revoke_item_hard(
+    collection_id: str, item_id: str, token_data: TokenData
+) -> None:
     payload = RevokePayload(
         method="DELETE", collection_id=collection_id, item_id=item_id
     )
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await alternate_message(event)
 
 
 async def partial_update_item(
-    collection_id: str, item_id: str, item: Dict[str, Any]
+    collection_id: str, item_id: str, item: Dict[str, Any], token_data: TokenData
 ) -> None:
     payload = PartialUpdatePayload(
         method="PATCH", collection_id=collection_id, item=item, item_id=item_id
     )
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await alternate_message(event)
 
 
@@ -181,7 +249,7 @@ async def create_item(
     if await check_item_exists(collection_id, item.id):
         raise HTTPException(status_code=409, detail="Item already exists")
 
-    await post_item(collection_id, item)
+    await post_item(collection_id, item, current_user)
 
     return item
 
@@ -213,7 +281,7 @@ async def update_item(
         raise HTTPException(status_code=409, detail="Cannot update non-existent item")
 
     try:
-        await modify_item(collection_id, item, item_id)
+        await modify_item(collection_id, item, item_id, current_user)
     except Exception as e:
         (f"Collection {collection_id} not found: {str(e)}")
 
@@ -239,7 +307,7 @@ async def delete_item_hard(
 
     if not await check_item_exists(collection_id, item_id):
         raise HTTPException(status_code=409, detail="Cannot delete non-existent item")
-    await revoke_item_hard(collection_id, item_id)
+    await revoke_item_hard(collection_id, item_id, current_user)
 
     return None
 
@@ -265,6 +333,6 @@ async def partial_update(
 
     if not await check_item_exists(collection_id, item_id):
         raise HTTPException(status_code=409, detail="Cannot update non-existent item")
-    await partial_update_item(collection_id, item_id, item)
+    await partial_update_item(collection_id, item_id, item, current_user)
 
     return None

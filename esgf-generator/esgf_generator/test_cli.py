@@ -44,7 +44,7 @@ def get_item_details(result: Result) -> None:
 
 
 def check_elasticsearch_index(expected_properties: dict[str, Any]) -> None:
-    time.sleep(8)
+    time.sleep(12)
     response = es.get(
         index=f"items_{collection_id}-000001", id=f"{item_id}|{collection_id}"
     )

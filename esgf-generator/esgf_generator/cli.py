@@ -142,16 +142,14 @@ def esgf_generator(
             click.echo(
                 f"Sending {instance.properties.instance_id}, collection: {instance.collection} to ESGF node '{node}'"
             )
-            click.echo()
-
             with httpx.Client() as client:
                 result = client.post(
                     f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
                     headers={"Authorization": f"Bearer {token}"},
                     content=instance.model_dump_json(),
                 )
-                click.echo()
 
+                click.echo()
                 if result.status_code == 401:
                     click.echo("You are not Authorised")
                 elif result.status_code == 403:
@@ -160,15 +158,14 @@ def esgf_generator(
                     click.echo("Item already exists")
                 elif result.status_code >= 300:
                     raise Exception(result.content)
-
                 else:
                     click.echo(instance.model_dump_json(indent=2))
-
+                    click.echo()
                     if delay:
                         click.echo("Pausing for random sub-second time")
                         time.sleep(random.random())
                         click.echo()
-                        click.echo("Done")
+                    click.echo("Done")
 
 
 @click.command()
@@ -236,6 +233,7 @@ def esgf_update(
                     content=item.model_dump_json(),
                 )
 
+            click.echo()
             if result.status_code == 401:
                 click.echo("You are not Authorised")
             elif result.status_code == 403:
@@ -246,7 +244,6 @@ def esgf_update(
                 raise Exception(result.content)
 
             else:
-                click.echo()
                 click.echo("Done")
 
 
@@ -279,8 +276,8 @@ def esgf_delete(
     """
     token = authenticate()
 
-    click.echo(f"Deleting item {item_id} in collection {collection_id}")
     click.echo()
+    click.echo(f"Deleting item {item_id} in collection {collection_id}")
 
     if publish:
         with httpx.Client() as client:
@@ -290,8 +287,8 @@ def esgf_delete(
                     headers={"Authorization": f"Bearer {token}"},
                 )
             else:
-                click.echo("Soft deleting item")
                 click.echo()
+                click.echo("Soft deleting item")
 
                 content = {"properties": {"retracted": True}}
                 result = client.patch(
@@ -300,6 +297,7 @@ def esgf_delete(
                     content=json.dumps(content),
                 )
 
+            click.echo()
             if result.status_code == 401:
                 click.echo("You are not Authorised")
             elif result.status_code == 403:
@@ -310,7 +308,6 @@ def esgf_delete(
                 raise Exception(result.content)
 
             else:
-                click.echo()
                 click.echo("Done")
 
 

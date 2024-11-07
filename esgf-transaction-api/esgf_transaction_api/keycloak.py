@@ -18,6 +18,8 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveF
 
 TOKEN_URL = os.getenv("TOKEN_URL")
 
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL")
+
 if not TOKEN_URL:
     raise Exception("TOKEN_URL is not set")
 
@@ -25,10 +27,13 @@ if not TOKEN_URL:
 class TokenData(BaseModel):
     username: Optional[str] = None
     roles: Optional[list[str]] = []
+    sub: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[str] = None
 
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
-    authorizationUrl="http://localhost:8086/realms/ESGF-Playground/protocol/openid-connect/auth",
+    authorizationUrl=f"{KEYCLOAK_URL}/realms/ESGF-Playground/protocol/openid-connect/auth",
     tokenUrl=TOKEN_URL,
 )
 
@@ -44,7 +49,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
         )
         username: str = payload.get("preferred_username")
         roles: list[str] = payload.get("realm_access", {}).get("roles", [])
-        token_data = TokenData(username=username, roles=roles)
+        sub: str = payload.get("sub")
+        name: str = f"{payload.get("given_name")} {payload.get("family_name")}"
+        email: str = payload.get("email")
+        token_data = TokenData(
+            username=username,
+            roles=roles,
+            sub=sub,
+            name=name,
+            email=email,
+        )
 
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Error decoding token")
