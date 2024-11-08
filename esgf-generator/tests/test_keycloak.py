@@ -1,11 +1,12 @@
 import os
-from typing import Generator
+import time
+from typing import Generator, Optional, Tuple
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 from dotenv import find_dotenv, load_dotenv, unset_key
 
-from esgf_generator.cli import esgf_generator, validate_token
+from esgf_generator.cli import esgf_delete, esgf_generator, validate_token
 
 ENV_FILE = find_dotenv()
 
@@ -29,6 +30,34 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
+def get_item_details(result: Result) -> Optional[Tuple[str, str]]:
+    if result is None:
+        return None
+    output_lines = result.output.splitlines()
+
+    for line in output_lines:
+        if "Sending" in line:
+            parts = line.split(", ")
+            item_id = parts[0].split()[1]
+            collection_id = parts[1].split()[1]
+            return collection_id, item_id
+    return None
+
+
+def delete_generated_item(runner: CliRunner, collection_id: str, item_id: str) -> None:
+    runner.invoke(
+        esgf_delete,
+        [
+            collection_id,
+            item_id,
+            "--node",
+            "east",
+            "--hard",
+            "--publish",
+        ],
+    )
+
+
 def test_invalid_credentials(runner: CliRunner) -> None:
     user_input = "invalid_user\ninvalid_user"
 
@@ -47,17 +76,26 @@ def test_invalid_credentials(runner: CliRunner) -> None:
 
 
 def test_validate_token(runner: CliRunner) -> None:
-    user_input = "test_user\ntest_user"
+    user_input = "test_admin\ntest_admin"
 
     result = runner.invoke(
         esgf_generator, ["1", "--node", "east", "--publish"], input=user_input
     )
+
+    details = get_item_details(result)
+
+    if details is None:
+        pytest.fail("Coould not retreive collection_id and item_id")
 
     if result.exit_code != 0:
         pytest.fail(f"Expected exit code 0, got {result.exit_code}")
 
     if not validate_token():
         pytest.fail("Token validation failed")
+
+    collection_id, item_id = details
+    time.sleep(15)
+    delete_generated_item(runner, collection_id, item_id)
 
 
 def test_invalid_token(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -68,11 +106,16 @@ def test_invalid_token(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_get_token(runner: CliRunner) -> None:
-    user_input = "test_user\ntest_user"
+    user_input = "test_admin\ntest_admin"
 
     result = runner.invoke(
         esgf_generator, ["1", "--node", "east", "--publish"], input=user_input
     )
+
+    details = get_item_details(result)
+
+    if details is None:
+        pytest.fail("Coould not retreive collection_id and item_id")
 
     load_dotenv(ENV_FILE)
     token = os.getenv("TOKEN")
@@ -82,3 +125,7 @@ def test_get_token(runner: CliRunner) -> None:
 
     if not token:
         pytest.fail("Token should be set")
+
+    collection_id, item_id = details
+    time.sleep(15)
+    delete_generated_item(runner, collection_id, item_id)

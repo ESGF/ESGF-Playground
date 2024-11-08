@@ -6,7 +6,7 @@ from click.testing import CliRunner, Result
 from dotenv import find_dotenv, load_dotenv, unset_key
 from elasticsearch import Elasticsearch
 
-from .cli import esgf_delete, esgf_generator, esgf_update
+from esgf_generator.cli import esgf_delete, esgf_generator, esgf_replicate, esgf_update
 
 es = Elasticsearch(["http://localhost:9200"])
 
@@ -44,7 +44,7 @@ def get_item_details(result: Result) -> None:
 
 
 def check_elasticsearch_index(expected_properties: dict[str, Union[str, bool]]) -> None:
-    time.sleep(12)
+    time.sleep(20)
     response = es.get(
         index=f"items_{collection_id}-000001", id=f"{item_id}|{collection_id}"
     )
@@ -79,21 +79,59 @@ def test_add_replica(runner: CliRunner) -> None:
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
-        esgf_update,
+        esgf_replicate,
         [
             collection_id,
             item_id,
             "--node",
             "east",
             "--publish",
-            "--partial",
-            '{"properties": {"Replica": "Node 1"}}',
         ],
         input=user_input,
     )
     if result.exit_code != 0:
         pytest.fail(f"Command failed with exit code {result.exit_code}")
-    check_elasticsearch_index({"properties.Replica": "Node 1"})
+    check_elasticsearch_index({"properties.replica": True})
+
+
+def test_remove_replica(runner: CliRunner) -> None:
+    user_input = "test_user\ntest_user"
+
+    result = runner.invoke(
+        esgf_update,
+        [
+            collection_id,
+            item_id,
+            "--publish",
+            "--node",
+            "east",
+            "--partial",
+            '{"properties": {"replica": false}}',
+        ],
+        input=user_input,
+    )
+    if result.exit_code != 0:
+        pytest.fail(f"Command failed with exit code {result.exit_code}")
+    check_elasticsearch_index({"properties.replica": False})
+
+
+def test_esgf_update_invalid_json(runner: CliRunner) -> None:
+    user_input = "test_user\ntest_user"
+
+    result = runner.invoke(
+        esgf_update,
+        [
+            "collection_id",
+            "item_id",
+            "--node",
+            "east",
+            "--partial",
+            '{"properties": {"replica": False}}',
+        ],
+        input=user_input,
+    )
+    if "Invalid JSON string" not in result.output:
+        pytest.fail("Expected 'Invalid JSON string' in output")
 
 
 def test_update_item(runner: CliRunner) -> None:
@@ -116,7 +154,7 @@ def test_update_item(runner: CliRunner) -> None:
         pytest.fail("Failed to update item")
 
 
-def test_remove_replica(runner: CliRunner) -> None:
+def test_retract_item(runner: CliRunner) -> None:
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -134,6 +172,27 @@ def test_remove_replica(runner: CliRunner) -> None:
     if result.exit_code != 0:
         pytest.fail(f"Command failed with exit code {result.exit_code}")
     check_elasticsearch_index({"properties.retracted": True})
+
+
+def test_unretract_item(runner: CliRunner) -> None:
+    user_input = "test_user\ntest_user"
+
+    result = runner.invoke(
+        esgf_update,
+        [
+            collection_id,
+            item_id,
+            "--node",
+            "east",
+            "--publish",
+            "--partial",
+            '{"properties": {"retracted": false}}',
+        ],
+        input=user_input,
+    )
+    if result.exit_code != 0:
+        pytest.fail(f"Command failed with exit code {result.exit_code}")
+    check_elasticsearch_index({"properties.retracted": False})
 
 
 def test_remove_item(runner: CliRunner) -> None:

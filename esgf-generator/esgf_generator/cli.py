@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import random
 import time
 from typing import Any, Dict, Literal
@@ -24,6 +25,13 @@ load_dotenv(ENV_FILE)
 PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveFnjy2OFhKckLFyzczxCjoWq96nGTlrfWz2U4J+e8u0iHEmVaSfVDD5AG02UGNEk9TfMLuaONZjeM2w4OHYzFNaPxEmobthOcJHAsrpRwT3w4JHLEYSFVRQG8HdKha9e9qUublJVwsxFqVgPPgPK0PJpy9MSc48EMp4GbGBx9Hit9tFEIS9VPZ8BVPVm04bxOdXky/aFLsUOTS2V2FY98ABMQ8TKnbZBdXAFUnk0L3TZfkmNnvfKvUJzes79846MZKF4gVEJJ8vnD9a+u4IaMSecFCF17SEB50QMoawn3GXCK3ppZE1QIDAQAB
 -----END PUBLIC KEY-----"""
+
+
+def parse_json(partial: str) -> Dict[str, Any]:
+    try:
+        return json.loads(partial)
+    except json.JSONDecodeError:
+        raise click.ClickException("Invalid JSON string")
 
 
 def validate_token() -> bool:
@@ -71,14 +79,13 @@ def authenticate() -> str:
 
         if token is None:
             click.echo("Failed to retrieve token: Logout and try again")
-            exit(1)
+            sys.exit()
 
         set_key(ENV_FILE, "TOKEN", token)
         return token
     else:
         click.echo()
-        click.echo("Authentication Failed")
-        exit(1)
+        raise click.ClickException("Authentication Failed")
 
 
 def update_topic(item: ESGFItem, item_id: str, collection_id: str) -> ESGFItem:
@@ -206,7 +213,7 @@ def esgf_update(
 
     item = data[0]
 
-    partial_update_data: Dict[str, Any] = json.loads(partial)
+    partial_update_data: Dict[str, Any] = parse_json(partial)
 
     item = update_topic(item, item_id, collection_id)
 
@@ -240,6 +247,53 @@ def esgf_update(
                 click.echo("Not enough permissions")
             elif result.status_code == 409:
                 click.echo("Cannot update non-existent item")
+            elif result.status_code >= 300:
+                raise Exception(result.content)
+            else:
+                click.echo("Done")
+
+
+@click.command()
+@click.argument("collection_id", type=str)
+@click.argument("item_id", type=str)
+@click.option("--node", type=click.Choice(["east", "west"]))
+@click.option(
+    "--publish/--no-publish",
+    default=False,
+    help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
+)
+def esgf_replicate(
+    collection_id: str,
+    item_id: str,
+    publish: bool,
+    node: Literal["east", "west"],
+) -> None:
+    """
+    Replicate an ESGF item.
+
+    COLLECTION_ID is the identifier of the collection that contains the item.
+    ITEM_ID is the identifier of the item to update.
+    """
+    token = authenticate()
+
+    click.echo()
+    click.echo(f"Replicating item {item_id} in collection {collection_id}")
+
+    if publish:
+        with httpx.Client(timeout=5.0) as client:
+            result = client.patch(
+                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                headers={"Authorization": f"Bearer {token}"},
+                content=json.dumps({"properties": {"replica": True}}),
+            )
+
+            click.echo()
+            if result.status_code == 401:
+                click.echo("You are not Authorised")
+            elif result.status_code == 403:
+                click.echo("Not enough permissions")
+            elif result.status_code == 409:
+                click.echo("Cannot replicate non-existent item")
             elif result.status_code >= 300:
                 raise Exception(result.content)
             else:
@@ -286,9 +340,6 @@ def esgf_delete(
                     headers={"Authorization": f"Bearer {token}"},
                 )
             else:
-                click.echo()
-                click.echo("Soft deleting item")
-
                 content = {"properties": {"retracted": True}}
                 result = client.patch(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
