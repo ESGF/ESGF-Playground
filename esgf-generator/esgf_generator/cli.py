@@ -1,9 +1,9 @@
 import json
 import os
-import sys
 import random
+import sys
 import time
-from typing import Any, Dict, Literal
+from typing import Any, Dict, Literal, cast
 
 import click
 import httpx
@@ -29,7 +29,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveF
 
 def parse_json(partial: str) -> Dict[str, Any]:
     try:
-        return json.loads(partial)
+        return cast(Dict[str, Any], json.loads(partial))
     except json.JSONDecodeError:
         raise click.ClickException("Invalid JSON string")
 
@@ -213,7 +213,7 @@ def esgf_update(
 
     item = data[0]
 
-    partial_update_data: Dict[str, Any] = parse_json(partial)
+    partial_update_data = parse_json(partial)
 
     item = update_topic(item, item_id, collection_id)
 
