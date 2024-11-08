@@ -15,6 +15,7 @@ pytest = "^8.3.3"
 elasticsearch = "^8.15.1"
 pyjwt = "^2.9.0"
 cryptography = "^43.0.3"
+pymongo = "^4.10.1"
 
 
 [tool.poetry.group.black.dependencies]
