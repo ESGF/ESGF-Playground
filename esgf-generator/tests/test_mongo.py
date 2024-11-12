@@ -47,6 +47,9 @@ def clean_env() -> Generator[None, None, None]:
 
 
 def test_database_connection() -> None:
+    """
+    Test the database connection by pinging the MongoDB server.
+    """
     try:
         client.admin.command("ping")
     except Exception as e:
@@ -54,6 +57,9 @@ def test_database_connection() -> None:
 
 
 def test_create_event_in_database(runner: CliRunner) -> None:
+    """
+    Test a create event in the database using the esgf_generator CLI command.
+    """
     result = runner.invoke(
         esgf_generator,
         ["1", "--node", "east", "--publish"],
@@ -67,6 +73,9 @@ def test_create_event_in_database(runner: CliRunner) -> None:
 
 
 def test_update_event_in_database(runner: CliRunner) -> None:
+    """
+    Test an update event in the database using the esgf_update CLI command.
+    """
     runner.invoke(
         esgf_update,
         ["collection_id", "item_id", "--node", "east", "--publish"],
@@ -78,6 +87,9 @@ def test_update_event_in_database(runner: CliRunner) -> None:
 
 
 def test_patch_event_in_database(runner: CliRunner) -> None:
+    """
+    Test a patching event in the database using the esgf_replicate CLI command.
+    """
     runner.invoke(
         esgf_replicate,
         [
@@ -95,6 +107,9 @@ def test_patch_event_in_database(runner: CliRunner) -> None:
 
 
 def test_delete_event_in_database(runner: CliRunner) -> None:
+    """
+    Test a deleting event in the database using the esgf_delete CLI command.
+    """
     runner.invoke(
         esgf_delete,
         ["collection_id", "item_id", "--node", "east", "--publish"],

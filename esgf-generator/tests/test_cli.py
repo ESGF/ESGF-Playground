@@ -62,6 +62,9 @@ def check_elasticsearch_index(expected_properties: dict[str, Union[str, bool]]) 
 
 
 def test_add_new_item(runner: CliRunner) -> None:
+    """
+    Test adding a new item using the esgf_generator CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -76,6 +79,9 @@ def test_add_new_item(runner: CliRunner) -> None:
 
 
 def test_add_replica(runner: CliRunner) -> None:
+    """
+    Test adding a replica using the esgf_replicate CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -95,6 +101,9 @@ def test_add_replica(runner: CliRunner) -> None:
 
 
 def test_remove_replica(runner: CliRunner) -> None:
+    """
+    Test removing a replica using the esgf_update CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -116,6 +125,9 @@ def test_remove_replica(runner: CliRunner) -> None:
 
 
 def test_esgf_update_invalid_json(runner: CliRunner) -> None:
+    """
+    Test updating an item with invalid JSON using the esgf_update CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -135,6 +147,9 @@ def test_esgf_update_invalid_json(runner: CliRunner) -> None:
 
 
 def test_update_item(runner: CliRunner) -> None:
+    """
+    Test updating an item using the esgf_update CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -155,6 +170,9 @@ def test_update_item(runner: CliRunner) -> None:
 
 
 def test_retract_item(runner: CliRunner) -> None:
+    """
+    Test retracting an item using the esgf_delete CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -175,6 +193,9 @@ def test_retract_item(runner: CliRunner) -> None:
 
 
 def test_unretract_item(runner: CliRunner) -> None:
+    """
+    Test unretracting an item using the esgf_update CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(
@@ -195,7 +216,25 @@ def test_unretract_item(runner: CliRunner) -> None:
     check_elasticsearch_index({"properties.retracted": False})
 
 
+def test_role_based_access(runner: CliRunner) -> None:
+    """
+    Test role-based access using the esgf_generator CLI command.
+    """
+    user_input = "test_user\ntest_user"
+
+    result = runner.invoke(
+        esgf_delete,
+        [collection_id, item_id, "--node", "east", "--hard", "--publish"],
+        input=user_input,
+    )
+    if "Not enough permissions" not in result.output:
+        pytest.fail("Not enough permissions")
+
+
 def test_remove_item(runner: CliRunner) -> None:
+    """
+    Test removing an item using the esgf_delete CLI command.
+    """
     user_input = "test_admin\ntest_admin"
 
     result = runner.invoke(
@@ -211,6 +250,9 @@ def test_remove_item(runner: CliRunner) -> None:
 
 
 def test_delete_non_existent_item(runner: CliRunner) -> None:
+    """
+    Test deleting a non-existent item using the esgf_delete CLI command.
+    """
     user_input = "test_admin\ntest_admin"
 
     result = runner.invoke(
@@ -224,6 +266,9 @@ def test_delete_non_existent_item(runner: CliRunner) -> None:
 
 
 def test_update_non_existent_item(runner: CliRunner) -> None:
+    """
+    Test updating a non-existent item using the esgf_update CLI command.
+    """
     user_input = "test_user\ntest_user"
 
     result = runner.invoke(

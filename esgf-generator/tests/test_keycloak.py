@@ -59,6 +59,9 @@ def delete_generated_item(runner: CliRunner, collection_id: str, item_id: str) -
 
 
 def test_invalid_credentials(runner: CliRunner) -> None:
+    """
+    Test invalid keycloak credentials when trying to run a command.
+    """
     user_input = "invalid_user\ninvalid_user"
 
     result = runner.invoke(
@@ -76,6 +79,9 @@ def test_invalid_credentials(runner: CliRunner) -> None:
 
 
 def test_validate_token(runner: CliRunner) -> None:
+    """
+    Test validating an access token.
+    """
     user_input = "test_admin\ntest_admin"
 
     result = runner.invoke(
@@ -99,6 +105,9 @@ def test_validate_token(runner: CliRunner) -> None:
 
 
 def test_invalid_token(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test validating an invalid access token.
+    """
     monkeypatch.setenv("TOKEN", "invalid_token")
 
     if validate_token():
@@ -106,6 +115,9 @@ def test_invalid_token(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_get_token(runner: CliRunner) -> None:
+    """
+    Test retreiving a new access token.
+    """
     user_input = "test_admin\ntest_admin"
 
     result = runner.invoke(
