@@ -53,6 +53,8 @@ A utility for creating fake records is available as follows:
 foo@bar:~$ cd esgf-generator
 foo@bar:~$ poetry install
 foo@bar:~$ poetry run esgf_generator --help
+foo@bar:~$ Username: test_user
+foo@bar:~$ PAssword: test_user  # Can use test_admin for both username and password for additional privileges.
 Usage: esgf_generator [OPTIONS] COUNT
 
   Generate a number of ESGF items.
@@ -230,6 +232,8 @@ randomised CMIP6 / Cordex data:
 foo@bar:~$ cd esgf-generator
 foo@bar:~$ poetry install
 foo@bar:~$ poetry run esgf_generator 1000 --publish --node east
+foo@bar:~$ Username: test_user
+foo@bar:~$ PAssword: test_user  # Can use test_admin for both username and password for additional privileges.
 ...(many STAC records printed)...
 ```
 
