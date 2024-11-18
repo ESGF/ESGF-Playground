@@ -334,13 +334,13 @@ wmi = ["wmi (>=1.5.1)"]
 
 [[package]]
 name = "esgf-playground-utils"
-version = "0.3.5"
+version = "0.3.6"
 description = "Common library and models for the ESGF-Playground"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "esgf_playground_utils-0.3.5-py3-none-any.whl", hash = "sha256:38924b19fb53390c109ac50bb703fb7b190c4ad6a23e2af7b9a56900b1f42cdd"},
-    {file = "esgf_playground_utils-0.3.5.tar.gz", hash = "sha256:c01c74c0b2adbd86e6df5a3aade5cf07d0a50824f4cd92031db7fd3631b56fdc"},
+    {file = "esgf_playground_utils-0.3.6-py3-none-any.whl", hash = "sha256:e971bade1b805deda3ee9d8cbdefb9cba0ba218cc000dde0f9eecf95c1e14402"},
+    {file = "esgf_playground_utils-0.3.6.tar.gz", hash = "sha256:99c5ff0e6b3468874efe7828effb419b43173ea8e0e0c0bc56a748b342bcc751"},
 ]
 
 [package.dependencies]
@@ -379,13 +379,13 @@ files = [
 
 [[package]]
 name = "httpcore"
-version = "1.0.6"
+version = "1.0.7"
 description = "A minimal low-level HTTP client."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "httpcore-1.0.6-py3-none-any.whl", hash = "sha256:27b59625743b85577a8c0e10e55b50b5368a4f2cfe8cc7bcfa9cf00829c2682f"},
-    {file = "httpcore-1.0.6.tar.gz", hash = "sha256:73f6dbd6eb8c21bbf7ef8efad555481853f5f6acdeaff1edb0694289269ee17f"},
+    {file = "httpcore-1.0.7-py3-none-any.whl", hash = "sha256:a3fff8f43dc260d5bd363d9f9cf1830fa3a458b332856f34282de498ed420edd"},
+    {file = "httpcore-1.0.7.tar.gz", hash = "sha256:8551cb62a169ec7162ac7be8d4817d561f60e08eaa485234898414bb5a8a0b4c"},
 ]
 
 [package.dependencies]
@@ -568,13 +568,13 @@ files = [
 
 [[package]]
 name = "packaging"
-version = "24.1"
+version = "24.2"
 description = "Core utilities for Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "packaging-24.1-py3-none-any.whl", hash = "sha256:5b8f2217dbdbd2f7f384c41c628544e6d52f2d0f53c6d0c3ea61aa5d1d7ff124"},
-    {file = "packaging-24.1.tar.gz", hash = "sha256:026ed72c8ed3fcce5bf8950572258698927fd1dbda10a5e981cdf0ac37f4f002"},
+    {file = "packaging-24.2-py3-none-any.whl", hash = "sha256:09abb1bccd265c01f4a3aa3f7a7db064b36514d2cba19a2f694fe6150451a759"},
+    {file = "packaging-24.2.tar.gz", hash = "sha256:c228a6dc5e932d346bc5739379109d49e8853dd8223571c7c5b55260edc0b97f"},
 ]
 
 [[package]]
