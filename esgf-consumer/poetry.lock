@@ -334,13 +334,13 @@ wmi = ["wmi (>=1.5.1)"]
 
 [[package]]
 name = "esgf-playground-utils"
-version = "0.3.6"
+version = "0.3.8"
 description = "Common library and models for the ESGF-Playground"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "esgf_playground_utils-0.3.6-py3-none-any.whl", hash = "sha256:e971bade1b805deda3ee9d8cbdefb9cba0ba218cc000dde0f9eecf95c1e14402"},
-    {file = "esgf_playground_utils-0.3.6.tar.gz", hash = "sha256:99c5ff0e6b3468874efe7828effb419b43173ea8e0e0c0bc56a748b342bcc751"},
+    {file = "esgf_playground_utils-0.3.8-py3-none-any.whl", hash = "sha256:0ac71de8144de43ca4d5b95952a5a32c9419e04405d8b841934b87a00b7a2914"},
+    {file = "esgf_playground_utils-0.3.8.tar.gz", hash = "sha256:cbe26418c359ac5180184574148b9a4d698af0e574e5219cf7340965043d6c87"},
 ]
 
 [package.dependencies]

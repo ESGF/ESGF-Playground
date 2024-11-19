@@ -71,6 +71,7 @@ def test_invalid_credentials(runner: CliRunner) -> None:
     load_dotenv(ENV_FILE)
     token = os.getenv("TOKEN")
 
+    time.sleep(5)
     if "Authentication Failed" not in result.output:
         pytest.fail("Expected 'Authentication Failed' in output")
 
@@ -91,7 +92,7 @@ def test_validate_token(runner: CliRunner) -> None:
     details = get_item_details(result)
 
     if details is None:
-        pytest.fail("Coould not retreive collection_id and item_id")
+        pytest.fail("Could not retreive collection_id and item_id")
 
     if result.exit_code != 0:
         pytest.fail(f"Expected exit code 0, got {result.exit_code}")
@@ -127,7 +128,7 @@ def test_get_token(runner: CliRunner) -> None:
     details = get_item_details(result)
 
     if details is None:
-        pytest.fail("Coould not retreive collection_id and item_id")
+        pytest.fail("Could not retreive collection_id and item_id")
 
     load_dotenv(ENV_FILE)
     token = os.getenv("TOKEN")

@@ -1,8 +1,8 @@
 import json
 import os
 import random
-import sys
 import time
+import uuid
 from typing import Any, Dict, Literal, cast
 
 import click
@@ -25,6 +25,19 @@ load_dotenv(ENV_FILE)
 PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveFnjy2OFhKckLFyzczxCjoWq96nGTlrfWz2U4J+e8u0iHEmVaSfVDD5AG02UGNEk9TfMLuaONZjeM2w4OHYzFNaPxEmobthOcJHAsrpRwT3w4JHLEYSFVRQG8HdKha9e9qUublJVwsxFqVgPPgPK0PJpy9MSc48EMp4GbGBx9Hit9tFEIS9VPZ8BVPVm04bxOdXky/aFLsUOTS2V2FY98ABMQ8TKnbZBdXAFUnk0L3TZfkmNnvfKvUJzes79846MZKF4gVEJJ8vnD9a+u4IaMSecFCF17SEB50QMoawn3GXCK3ppZE1QIDAQAB
 -----END PUBLIC KEY-----"""
+
+
+def check_status_code(result: httpx.Response) -> bool:
+    if result.status_code == 401:
+        raise click.ClickException("You are not Authorised")
+    elif result.status_code == 403:
+        raise click.ClickException("Not enough permissions")
+    elif result.status_code == 409:
+        raise click.ClickException("Cannot operate on non-existent item")
+    elif result.status_code >= 300:
+        raise Exception(result.content)
+    else:
+        return True
 
 
 def parse_json(partial: str) -> Dict[str, Any]:
@@ -63,11 +76,15 @@ def authenticate() -> str:
     password = click.prompt("Password", hide_input=True)
     click.echo()
 
+    client_secret = os.getenv("CLIENT_SECRET")
+    if client_secret is None:
+        raise click.ClickException("CLIENT_SECRET environment variable is not set")
+
     url = "http://localhost:8086/realms/ESGF-Playground/protocol/openid-connect/token"
     data = {
         "grant_type": "password",
         "client_id": "esgf_client",
-        "client_secret": os.getenv("CLIENT_SECRET"),
+        "client_secret": client_secret,
         "username": username,
         "password": password,
     }
@@ -76,16 +93,16 @@ def authenticate() -> str:
 
     if response.status_code == 200:
         token = response.json().get("access_token")
+        event_id = str(uuid.uuid4())
 
         if token is None:
-            click.echo("Failed to retrieve token: Logout and try again")
-            sys.exit()
+            raise click.ClickException("Failed to retrieve token: Logout and try again")
 
+        set_key(ENV_FILE, "EVENT_ID", event_id)
         set_key(ENV_FILE, "TOKEN", token)
         return token
     else:
-        click.echo()
-        raise click.ClickException("Authentication Failed")
+        raise click.ClickException("\nAuthentication Failed")
 
 
 def update_topic(item: ESGFItem, item_id: str, collection_id: str) -> ESGFItem:
@@ -96,7 +113,7 @@ def update_topic(item: ESGFItem, item_id: str, collection_id: str) -> ESGFItem:
 
     split_item = item_id.split(".")
     if len(split_item) != 10:
-        raise ValueError("Error with item naming format")
+        raise click.ClickException("Error with item naming format")
 
     (
         item.properties.mip_era,
@@ -136,8 +153,7 @@ def esgf_generator(
     """
     token = authenticate()
 
-    click.echo(f"Producing {count} STAC records")
-    click.echo()
+    click.echo(f"Producing {count} STAC records\n")
 
     data = ESGFItemFactory().batch(
         count,
@@ -147,31 +163,29 @@ def esgf_generator(
 
         if publish:
             click.echo(
-                f"Sending {instance.properties.instance_id}, collection: {instance.collection} to ESGF node '{node}'"
+                f"Sending {instance.properties.instance_id}, collection: {instance.collection} to ESGF node '{node}'\n"
             )
-            with httpx.Client(timeout=5.0) as client:
-                result = client.post(
-                    f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
-                    headers={"Authorization": f"Bearer {token}"},
-                    content=instance.model_dump_json(),
-                )
 
-                click.echo()
-                if result.status_code == 401:
-                    click.echo("You are not Authorised")
-                elif result.status_code == 403:
-                    click.echo("Not enough permissions")
-                elif result.status_code == 409:
-                    click.echo("Item already exists")
-                elif result.status_code >= 300:
-                    raise Exception(result.content)
-                else:
+            with httpx.Client(timeout=5.0) as client:
+
+                try:
+                    result = client.post(
+                        f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=instance.model_dump_json(),
+                    )
+                except httpx.RequestError:
+                    raise click.ClickException(
+                        "Connection error. System is still booting up, please try again"
+                    )
+                if check_status_code(result):
                     click.echo(instance.model_dump_json(indent=2))
                     click.echo()
+
                     if delay:
-                        click.echo("Pausing for random sub-second time")
+                        click.echo("Pausing for random sub-second time\n")
                         time.sleep(random.random())
-                        click.echo()
+
                     click.echo("Done")
 
 
@@ -216,40 +230,35 @@ def esgf_update(
     partial_update_data = parse_json(partial)
 
     item = update_topic(item, item_id, collection_id)
-
     if publish:
         with httpx.Client(timeout=5) as client:
-            if partial_update_data:
-                click.echo()
-                click.echo(
-                    f"Partially updating item {item_id} in collection {collection_id}"
-                )
+            try:
 
-                result = client.patch(
-                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                    headers={"Authorization": f"Bearer {token}"},
-                    content=json.dumps(partial_update_data),
-                )
+                if partial_update_data:
+                    click.echo(
+                        f"\nPartially updating item {item_id} in collection {collection_id}\n"
+                    )
 
-            else:
-                click.echo()
-                click.echo(f"Updating item {item_id} in collection {collection_id}")
-                result = client.put(
-                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                    headers={"Authorization": f"Bearer {token}"},
-                    content=item.model_dump_json(),
-                )
+                    result = client.patch(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=json.dumps(partial_update_data),
+                    )
 
-            click.echo()
-            if result.status_code == 401:
-                click.echo("You are not Authorised")
-            elif result.status_code == 403:
-                click.echo("Not enough permissions")
-            elif result.status_code == 409:
-                click.echo("Cannot update non-existent item")
-            elif result.status_code >= 300:
-                raise Exception(result.content)
-            else:
+                else:
+                    click.echo(
+                        f"\nUpdating item {item_id} in collection {collection_id}\n"
+                    )
+                    result = client.put(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=item.model_dump_json(),
+                    )
+            except httpx.RequestError:
+                raise click.ClickException(
+                    "Connection error. System is still booting up, please try again"
+                )
+            if check_status_code(result):
                 click.echo("Done")
 
 
@@ -276,27 +285,23 @@ def esgf_replicate(
     """
     token = authenticate()
 
-    click.echo()
-    click.echo(f"Replicating item {item_id} in collection {collection_id}")
+    click.echo(f"\nReplicating item {item_id} in collection {collection_id}\n")
 
     if publish:
         with httpx.Client(timeout=5.0) as client:
-            result = client.patch(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                headers={"Authorization": f"Bearer {token}"},
-                content=json.dumps({"properties": {"replica": True}}),
-            )
 
-            click.echo()
-            if result.status_code == 401:
-                click.echo("You are not Authorised")
-            elif result.status_code == 403:
-                click.echo("Not enough permissions")
-            elif result.status_code == 409:
-                click.echo("Cannot replicate non-existent item")
-            elif result.status_code >= 300:
-                raise Exception(result.content)
-            else:
+            try:
+                result = client.patch(
+                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                    headers={"Authorization": f"Bearer {token}"},
+                    content=json.dumps({"properties": {"replica": True}}),
+                )
+            except httpx.RequestError:
+                raise click.ClickException(
+                    "Connection error. System is still booting up, please try again"
+                )
+
+            if check_status_code(result):
                 click.echo("Done")
 
 
@@ -329,36 +334,31 @@ def esgf_delete(
     """
     token = authenticate()
 
-    click.echo()
-    click.echo(f"Deleting item {item_id} in collection {collection_id}")
+    click.echo(f"\nDeleting item {item_id} in collection {collection_id}\n")
 
     if publish:
         with httpx.Client(timeout=5.0) as client:
-            if hard:
-                result = client.delete(
-                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                    headers={"Authorization": f"Bearer {token}"},
-                )
-            else:
-                content = {"properties": {"retracted": True}}
-                result = client.patch(
-                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                    headers={"Authorization": f"Bearer {token}"},
-                    content=json.dumps(content),
-                )
 
-            click.echo()
-            if result.status_code == 401:
-                click.echo("You are not Authorised")
-            elif result.status_code == 403:
-                click.echo("Not enough permissions")
-            elif result.status_code == 409:
-                click.echo("Cannot delete non-existent item")
-            elif result.status_code >= 300:
-                raise Exception(result.content)
+            try:
 
-            else:
-                click.echo("Done")
+                if hard:
+                    result = client.delete(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                    )
+                else:
+                    content = {"properties": {"retracted": True}}
+                    result = client.patch(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=json.dumps(content),
+                    )
+            except httpx.RequestError:
+                raise click.ClickException(
+                    "Connection error. System is still booting up, please try again"
+                )
+            if check_status_code(result):
+                click.echo("\nDone")
 
 
 @click.command()
@@ -366,8 +366,6 @@ def logout() -> None:
     token = os.getenv("TOKEN")
     if token:
         unset_key(ENV_FILE, "TOKEN")
-        click.echo()
-        click.echo("Logged out")
+        click.echo("\nLogged out")
     else:
-        click.echo()
-        click.echo("Not logged in")
+        click.echo("\nNot logged in")

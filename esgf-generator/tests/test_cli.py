@@ -260,9 +260,10 @@ def test_delete_non_existent_item(runner: CliRunner) -> None:
         [collection_id, item_id, "--node", "east", "--hard", "--publish"],
         input=user_input,
     )
+    time.sleep(5)
 
-    if "Cannot delete non-existent item" not in result.output:
-        pytest.fail("Expected 'Cannot delete non-existent item' in output")
+    if "Cannot operate on non-existent item" not in result.output:
+        pytest.fail("Expected 'Cannot operate on non-existent item' in output")
 
 
 def test_update_non_existent_item(runner: CliRunner) -> None:
@@ -284,6 +285,7 @@ def test_update_non_existent_item(runner: CliRunner) -> None:
         ],
         input=user_input,
     )
+    time.sleep(5)
 
-    if "Cannot update non-existent item" not in result.output:
-        pytest.fail("Expected 'Cannot update non-existent item' in output")
+    if "Cannot operate on non-existent item" not in result.output:
+        pytest.fail("Expected 'Cannot operate on non-existent item' in output")

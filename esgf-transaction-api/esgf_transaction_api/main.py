@@ -1,18 +1,21 @@
 import logging
 import os
 import sys
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple, Union
+from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 import aiokafka
 import httpx
+from dotenv import load_dotenv
 from esgf_playground_utils.config.kafka import Settings
 from esgf_playground_utils.models.kafka import (
     Auth,
     AuthData,
     CreatePayload,
     Data,
+    ExtendedMetadata,
     KafkaEvent,
     Metadata,
     PartialUpdatePayload,
@@ -36,7 +39,10 @@ logger.addHandler(stream_handler)
 settings = Settings()
 producer: Optional[aiokafka.AIOKafkaProducer] = None
 
+load_dotenv()
+
 TOKEN = os.getenv("TOKEN")
+EVENT_ID = os.getenv("EVENT_ID")
 
 
 @asynccontextmanager
@@ -77,33 +83,7 @@ async def check_item_exists(collection_id: str, item_id: str) -> bool:
             return False
 
 
-def create_auth_basis_data(
-    token_data: TokenData,
-) -> Dict[str, Union[str, List[Dict[str, str]]]]:
-    def replace_none(value: Optional[str]) -> str:
-        return value if value is not None else "null"
-
-    authorization_basis: List[Dict[str, str]] = []
-
-    for role in token_data.roles or []:
-        authorization_basis.append(
-            {
-                "role": replace_none(role),
-                "member_id": replace_none(token_data.sub),
-                "member_name": replace_none(token_data.name),
-            }
-        )
-
-    auth_basis_data: Dict[str, Union[str, List[Dict[str, str]]]] = {
-        "authorization_basis_type": "role",
-        "authorization_basis_service": "keycloak",
-        "authorization_basis": authorization_basis,
-    }
-
-    return auth_basis_data
-
-
-def create_requester_data(token_data: TokenData) -> Dict[str, str]:
+def get_requester_data(token_data: TokenData) -> Dict[str, str]:
     return {
         "auth_service": "auth.esgf-playground",
         "sub": token_data.sub or "null",
@@ -115,37 +95,36 @@ def create_requester_data(token_data: TokenData) -> Dict[str, str]:
     }
 
 
-def auth_item_body(token_data: TokenData) -> Tuple[Dict[str, str], Dict[str, Any]]:
-    auth_basis_data = create_auth_basis_data(token_data)
-    requester_data = create_requester_data(token_data)
-    return requester_data, auth_basis_data
-
-
 def item_body(
     payload: Union[RevokePayload, UpdatePayload, CreatePayload, PartialUpdatePayload],
     token_data: TokenData,
 ) -> KafkaEvent:
 
-    requester_data, auth_basis_data = auth_item_body(token_data)
-
-    if isinstance(payload, CreatePayload):
-        auth = AuthData(
-            auth_policy_id="esgf-generator",
-            target_data={
-                "collection_id": payload.collection_id,
-                "item_id": payload.item.id,
-            },
-            requester_data=requester_data,
-            auth_basis_data=auth_basis_data,
-        )
-    else:
-        auth = Auth(client_id="esgf-generator", server="docker-compose-local")
+    requester_data = get_requester_data(token_data)
 
     data = Data(type="STAC", version="1.0.0", payload=payload)
     publisher = Publisher(package="esgf-generator", version="0.1.0")
-    metadata = Metadata(
-        auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0"
-    )
+    auth = Auth(client_id="esgf-generator", server="docker-compose-local")
+
+    if isinstance(payload, CreatePayload):
+        request_id = str(uuid.uuid4())
+        auth = AuthData(
+            auth_policy_id="ESGF-Publish-00012",
+            client_id="CEDA-transaction-client",
+            requester_data=requester_data,
+        )
+        metadata = ExtendedMetadata(
+            event_id=str(EVENT_ID),
+            request_id=request_id,
+            auth=auth,
+            publisher=publisher,
+            time=datetime.now(),
+            schema_version="1.0.0",
+        )
+    else:
+        metadata = Metadata(
+            auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0"
+        )
     event = KafkaEvent(metadata=metadata, data=data)
 
     return event
@@ -171,6 +150,7 @@ def get_topic_alternate(item_id: str) -> str:
 async def post_message(event: KafkaEvent) -> None:
     try:
         value = event.model_dump_json().encode("utf8")
+        logger.critical(value)
         topic = get_topic(event.data.payload.item)
 
         if producer is None:
