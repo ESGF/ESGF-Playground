@@ -9,4 +9,4 @@ RUN pip install poetry
 
 RUN poetry install --only main
 
-ENTRYPOINT ["poetry", "run", "python", "esgf_consumer/__init__.py"]
+ENTRYPOINT ["sh", "-c", "poetry run python $SCRIPT"]

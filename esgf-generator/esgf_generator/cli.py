@@ -1,26 +1,119 @@
 import json
+import os
 import random
 import time
-from typing import Any, Dict, Literal
+import uuid
+from typing import Any, Dict, Literal, cast
 
 import click
 import httpx
+import jwt
+from dotenv import find_dotenv, load_dotenv, set_key, unset_key
 from esgf_playground_utils.models.item import ESGFItem
 
 from esgf_generator import ESGFItemFactory
 
 NODE_PORTS = {"east": 9050, "west": 9051}
+ENV_FILE = find_dotenv()
+
+
+if ENV_FILE is None:
+    raise Exception("No .env file found, please create one in the root directory")
+
+load_dotenv(ENV_FILE)
+
+PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA60CVmUcJJ7MoiuihlrSw7+BkhQbQv3HDqveFnjy2OFhKckLFyzczxCjoWq96nGTlrfWz2U4J+e8u0iHEmVaSfVDD5AG02UGNEk9TfMLuaONZjeM2w4OHYzFNaPxEmobthOcJHAsrpRwT3w4JHLEYSFVRQG8HdKha9e9qUublJVwsxFqVgPPgPK0PJpy9MSc48EMp4GbGBx9Hit9tFEIS9VPZ8BVPVm04bxOdXky/aFLsUOTS2V2FY98ABMQ8TKnbZBdXAFUnk0L3TZfkmNnvfKvUJzes79846MZKF4gVEJJ8vnD9a+u4IaMSecFCF17SEB50QMoawn3GXCK3ppZE1QIDAQAB
+-----END PUBLIC KEY-----"""
+
+
+def check_status_code(result: httpx.Response) -> bool:
+    if result.status_code == 401:
+        raise click.ClickException("You are not Authorised")
+    elif result.status_code == 403:
+        raise click.ClickException("Not enough permissions")
+    elif result.status_code == 409:
+        raise click.ClickException("Cannot operate on non-existent item")
+    elif result.status_code >= 300:
+        raise Exception(result.content)
+    else:
+        return True
+
+
+def parse_json(partial: str) -> Dict[str, Any]:
+    try:
+        return cast(Dict[str, Any], json.loads(partial))
+    except json.JSONDecodeError:
+        raise click.ClickException("Invalid JSON string")
+
+
+def validate_token() -> bool:
+    load_dotenv(ENV_FILE)
+    token = os.getenv("TOKEN")
+    if not token:
+        return False
+
+    try:
+        jwt.decode(
+            token,
+            PUBLIC_KEY,
+            algorithms=["RS256"],
+            audience="ec404039-07b4-4a4f-97eb-e0accf60ee76",
+        )
+        return True
+    except jwt.PyJWTError:
+        return False
+
+
+def authenticate() -> str:
+    load_dotenv(ENV_FILE)
+
+    token = os.getenv("TOKEN")
+    if token and validate_token():
+        return token
+
+    username = click.prompt("Username")
+    password = click.prompt("Password", hide_input=True)
+    click.echo()
+
+    client_secret = os.getenv("CLIENT_SECRET")
+    if client_secret is None:
+        raise click.ClickException("CLIENT_SECRET environment variable is not set")
+
+    url = "http://localhost:8086/realms/ESGF-Playground/protocol/openid-connect/token"
+    data = {
+        "grant_type": "password",
+        "client_id": "esgf_client",
+        "client_secret": client_secret,
+        "username": username,
+        "password": password,
+    }
+
+    response = httpx.post(url, data=data, timeout=5.0)
+
+    if response.status_code == 200:
+        token = response.json().get("access_token")
+        event_id = str(uuid.uuid4())
+
+        if token is None:
+            raise click.ClickException("Failed to retrieve token: Logout and try again")
+
+        set_key(ENV_FILE, "EVENT_ID", event_id)
+        set_key(ENV_FILE, "TOKEN", token)
+        return token
+    else:
+        raise click.ClickException("\nAuthentication Failed")
 
 
 def update_topic(item: ESGFItem, item_id: str, collection_id: str) -> ESGFItem:
     item.id = item_id
     item.collection = collection_id
-    item.properties.instance_id = item_id
+    item.properties.instance_id = item.id
     item.properties.title = item.id
 
     split_item = item_id.split(".")
     if len(split_item) != 10:
-        raise ValueError("Error with item naming format")
+        raise click.ClickException("Error with item naming format")
 
     (
         item.properties.mip_era,
@@ -58,36 +151,42 @@ def esgf_generator(
 
     COUNT is the number of items to generate.
     """
-    click.echo(f"Producing {count} STAC records")
-    click.echo()
+    token = authenticate()
+
+    click.echo(f"Producing {count} STAC records\n")
 
     data = ESGFItemFactory().batch(
         count,
         stac_extensions=[],
     )
     for instance in data:
+
         if publish:
             click.echo(
-                f"Sending {instance.properties.instance_id} to ESGF node '{node}'"
+                f"Sending {instance.properties.instance_id}, collection: {instance.collection} to ESGF node '{node}'\n"
             )
 
-            with httpx.Client() as client:
-                result = client.post(
-                    f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
-                    content=instance.model_dump_json(),
-                )
-                if result.status_code >= 300:
-                    raise Exception(result.content)
+            with httpx.Client(timeout=5.0) as client:
 
-        click.echo(instance.model_dump_json(indent=2))
+                try:
+                    result = client.post(
+                        f"http://localhost:{NODE_PORTS[node]}/{instance.collection}/items",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=instance.model_dump_json(),
+                    )
+                except httpx.RequestError:
+                    raise click.ClickException(
+                        "Connection error. System is still booting up, please try again"
+                    )
+                if check_status_code(result):
+                    click.echo(instance.model_dump_json(indent=2))
+                    click.echo()
 
-        if delay:
-            click.echo("Pausing for random sub-second time")
-            time.sleep(random.random())
+                    if delay:
+                        click.echo("Pausing for random sub-second time\n")
+                        time.sleep(random.random())
 
-        click.echo()
-
-    click.echo("Done")
+                    click.echo("Done")
 
 
 @click.command()
@@ -119,6 +218,8 @@ def esgf_update(
     ITEM_ID is the identifier of the item to update.
     """
 
+    token = authenticate()
+
     data = ESGFItemFactory().batch(
         1,
         stac_extensions=[],
@@ -126,34 +227,82 @@ def esgf_update(
 
     item = data[0]
 
-    partial_update_data: Dict[str, Any] = json.loads(partial)
+    partial_update_data = parse_json(partial)
 
     item = update_topic(item, item_id, collection_id)
+    if publish:
+        with httpx.Client(timeout=5) as client:
+            try:
+
+                if partial_update_data:
+                    click.echo(
+                        f"\nPartially updating item {item_id} in collection {collection_id}\n"
+                    )
+
+                    result = client.patch(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=json.dumps(partial_update_data),
+                    )
+
+                else:
+                    click.echo(
+                        f"\nUpdating item {item_id} in collection {collection_id}\n"
+                    )
+                    result = client.put(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=item.model_dump_json(),
+                    )
+            except httpx.RequestError:
+                raise click.ClickException(
+                    "Connection error. System is still booting up, please try again"
+                )
+            if check_status_code(result):
+                click.echo("Done")
+
+
+@click.command()
+@click.argument("collection_id", type=str)
+@click.argument("item_id", type=str)
+@click.option("--node", type=click.Choice(["east", "west"]))
+@click.option(
+    "--publish/--no-publish",
+    default=False,
+    help="Whether to publish items to ESGF, or just print to the console (print happens anyway). Default: --no-publish",
+)
+def esgf_replicate(
+    collection_id: str,
+    item_id: str,
+    publish: bool,
+    node: Literal["east", "west"],
+) -> None:
+    """
+    Replicate an ESGF item.
+
+    COLLECTION_ID is the identifier of the collection that contains the item.
+    ITEM_ID is the identifier of the item to update.
+    """
+    token = authenticate()
+
+    click.echo(f"\nReplicating item {item_id} in collection {collection_id}\n")
 
     if publish:
-        with httpx.Client() as client:
-            if partial_update_data:
-                click.echo(
-                    f"Partially updating item {item_id} in collection {collection_id}"
-                )
-                click.echo()
+        with httpx.Client(timeout=5.0) as client:
 
+            try:
                 result = client.patch(
                     f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                    content=json.dumps(partial_update_data),
+                    headers={"Authorization": f"Bearer {token}"},
+                    content=json.dumps({"properties": {"replica": True}}),
+                )
+            except httpx.RequestError:
+                raise click.ClickException(
+                    "Connection error. System is still booting up, please try again"
                 )
 
-            else:
-                click.echo(f"Updating item {item_id} in collection {collection_id}")
-                click.echo()
-                result = client.put(
-                    f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                    content=item.model_dump_json(),
-                )
-            if result.status_code >= 300:
-                raise Exception(result.content)
-
-    click.echo("Done")
+            if check_status_code(result):
+                click.echo("Done")
 
 
 @click.command()
@@ -183,135 +332,40 @@ def esgf_delete(
     COLLECTION_ID is the identifier of the collection that contains the item.
     ITEM_ID is the identifier of the item to update.
     """
-    click.echo(f"Deleting item {item_id} in collection {collection_id}")
-    click.echo()
+    token = authenticate()
 
-    with httpx.Client() as client:
-        if hard:
-            result = client.delete(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}"
-            )
-        else:
-            click.echo("Soft deleting item")
-            click.echo()
-
-            content = {"properties": {"retracted": True}}
-            result = client.patch(
-                f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
-                content=json.dumps(content),
-            )
-        if result.status_code >= 300:
-            raise Exception(result.content)
-
-    click.echo("Done")
-
-
-@click.command()
-def esgf_generator_test() -> None:
-    """
-    Generate a number of ESGF items.
-
-    COUNT is the number of items to generate.
-    """
-    click.echo("Producing a STAC record to test")
-    click.echo()
-
-    data = ESGFItemFactory().batch(
-        1,
-        stac_extensions=[],
-    )
-    instance = data[0]
-    publish = True
+    click.echo(f"\nDeleting item {item_id} in collection {collection_id}\n")
 
     if publish:
-        click.echo(f"Sending {instance.properties.instance_id} to ESGF node 'east'")
-        click.echo()
+        with httpx.Client(timeout=5.0) as client:
 
-        with httpx.Client() as client:
+            try:
 
-            # Create Item
-            result = client.post(
-                f"http://localhost:9050/{instance.collection}/items",
-                content=instance.model_dump_json(),
-            )
-            if result.status_code >= 300:
-                click.echo("Test [1/3]: Failed")
-                raise Exception(result.content)
-
-            else:
-                click.echo("Test [1/3]: Passed")
-                click.echo(
-                    f"Created item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
+                if hard:
+                    result = client.delete(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                    )
+                else:
+                    content = {"properties": {"retracted": True}}
+                    result = client.patch(
+                        f"http://localhost:{NODE_PORTS[node]}/{collection_id}/items/{item_id}",
+                        headers={"Authorization": f"Bearer {token}"},
+                        content=json.dumps(content),
+                    )
+            except httpx.RequestError:
+                raise click.ClickException(
+                    "Connection error. System is still booting up, please try again"
                 )
-            click.echo("Waiting 10 seconds...")
-            time.sleep(10)
-
-            # Replication
-            patch_data = {"properties": {"retracted": True}}
-            patch_result = client.patch(
-                f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
-                content=json.dumps(patch_data),
-            )
-            if patch_result.status_code >= 300:
-                click.echo("Test [2/3]: Failed")
-                raise Exception(result.content)
-            else:
-                click.echo("Test [2/3]: Passed")
-                click.echo(
-                    f"Added  node to item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
-                )
-            click.echo("Waiting 10 seconds...")
-            time.sleep(10)
-
-            # Retraction
-            remove_patch = {"properties": {"retracted": False}}
-            remove_result = client.patch(
-                f"http://localhost:9050/{instance.collection}/items/{instance.properties.instance_id}",
-                content=json.dumps(remove_patch),
-            )
-            if remove_result.status_code >= 300:
-                click.echo("Test [3/3]: Failed")
-                raise Exception(result.content)
-
-            else:
-                click.echo("Test [3/3]: Passed")
-                click.echo(
-                    f"Reomved node from item {instance.properties.instance_id} in collection {instance.collection}, Status: {result.status_code}\n"
-                )
-
-    click.echo("Done")
+            if check_status_code(result):
+                click.echo("\nDone")
 
 
 @click.command()
-def duplication_test() -> None:
-    """
-    Generate a number of ESGF items.
-
-    """
-    click.echo("Producing a STAC record to test")
-    click.echo()
-
-    data = ESGFItemFactory().batch(
-        1,
-        stac_extensions=[],
-    )
-    instance = data[0]
-
-    with httpx.Client() as client:
-        result1 = client.post(
-            f"http://localhost:9050/{instance.collection}/items",
-            content=instance.model_dump_json(),
-        )
-        click.echo(result1.status_code)
-
-        result2 = client.post(
-            f"http://localhost:9050/{instance.collection}/items",
-            content=instance.model_dump_json(),
-        )
-        click.echo(result2.status_code)
-
-        click.echo(instance.model_dump_json(indent=2))
-
-        click.echo()
-
-    click.echo("Done")
+def logout() -> None:
+    token = os.getenv("TOKEN")
+    if token:
+        unset_key(ENV_FILE, "TOKEN")
+        click.echo("\nLogged out")
+    else:
+        click.echo("\nNot logged in")

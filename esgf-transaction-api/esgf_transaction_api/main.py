@@ -1,16 +1,21 @@
 import logging
+import os
 import sys
-import httpx
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 import aiokafka
+import httpx
+from dotenv import load_dotenv
 from esgf_playground_utils.config.kafka import Settings
 from esgf_playground_utils.models.kafka import (
     Auth,
+    AuthData,
     CreatePayload,
     Data,
+    ExtendedMetadata,
     KafkaEvent,
     Metadata,
     PartialUpdatePayload,
@@ -18,10 +23,10 @@ from esgf_playground_utils.models.kafka import (
     RevokePayload,
     UpdatePayload,
 )
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from stac_pydantic.item import Item
-from stac_pydantic.item_collection import ItemCollection
-from pystac_client import Client
+
+from .keycloak import TokenData, get_current_active_admin, get_current_active_user
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -33,6 +38,11 @@ logger.addHandler(stream_handler)
 
 settings = Settings()
 producer: Optional[aiokafka.AIOKafkaProducer] = None
+
+load_dotenv()
+
+TOKEN = os.getenv("TOKEN")
+EVENT_ID = os.getenv("EVENT_ID")
 
 
 @asynccontextmanager
@@ -50,55 +60,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[Any, Any]:
 app = FastAPI(lifespan=lifespan)
 
 
-def check_item_exists1(collection_id: str, item_id: str) -> bool:
-    stac_url = f"{settings.stac_server}"
-    logger.info(f"STAC Server URL: {stac_url}")
+async def check_item_exists(collection_id: str, item_id: str) -> bool:
+    stac_url = (
+        f"http://stac-fastapi-es-east:8080/collections/{collection_id}/items/{item_id}"
+    )
 
-    try:
-        catalog = Client.open(stac_url)
-        collection_exists = any(
-            col.id == collection_id for col in catalog.get_collections()
-        )
-
-        if not collection_exists:
-            return False
-
-        logger.info(
-            f"Collection '{collection_id}' exists. Checking for item '{item_id}'..."
-        )
-
-        collection_url = f"{stac_url}/collections/{collection_id}/items"
-        catalog = Client.open(collection_url)
-        search = catalog.search(ids=[item_id])
-
-        search = catalog.search(ids=[item_id])
-
-        item = next(search.get_items(), None)
-
-        if item:
-            logger.info(f"Item already exists: {item}")
-            return True
-        else:
-            return False
-
-    except Exception as e:
-        logger.error(f"Error accessing STAC server or collection: {str(e)}")
-        return False
-
-
-async def check_item_exists2(collection_id: str, item_id: str) -> bool:
-    stac_url = f"{settings.stac_server}collections/{collection_id}/items/{item_id}"
-
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             response = await client.get(stac_url)
-            if response.status_code == 200:
+            if response.status_code == 200 or response.status_code == 202:
                 logger.info(f"Item '{item_id}' exists in collection '{collection_id}'.")
                 return True
             elif response.status_code == 404:
-                logger.info(
-                    f"Item '{item_id}' does not exist in collection '{collection_id}'."
-                )
                 return False
             else:
                 logger.error(
@@ -110,15 +83,48 @@ async def check_item_exists2(collection_id: str, item_id: str) -> bool:
             return False
 
 
+def get_requester_data(token_data: TokenData) -> Dict[str, str]:
+    return {
+        "auth_service": "auth.esgf-playground",
+        "sub": token_data.sub or "null",
+        "username": token_data.username or "null",
+        "name": token_data.name or "null",
+        "email": token_data.email or "null",
+        "identity_provider": "null",
+        "identity_provider_display_name": "null",
+    }
+
+
 def item_body(
-    payload: Union[RevokePayload, UpdatePayload, CreatePayload, PartialUpdatePayload]
+    payload: Union[RevokePayload, UpdatePayload, CreatePayload, PartialUpdatePayload],
+    token_data: TokenData,
 ) -> KafkaEvent:
+
+    requester_data = get_requester_data(token_data)
+
     data = Data(type="STAC", version="1.0.0", payload=payload)
-    auth = Auth(client_id="esgf-generator", server="docker-compose-local")
     publisher = Publisher(package="esgf-generator", version="0.1.0")
-    metadata = Metadata(
-        auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0"
-    )
+    auth = Auth(client_id="esgf-generator", server="docker-compose-local")
+
+    if isinstance(payload, CreatePayload):
+        request_id = str(uuid.uuid4())
+        auth = AuthData(
+            auth_policy_id="ESGF-Publish-00012",
+            client_id="CEDA-transaction-client",
+            requester_data=requester_data,
+        )
+        metadata = ExtendedMetadata(
+            event_id=str(EVENT_ID),
+            request_id=request_id,
+            auth=auth,
+            publisher=publisher,
+            time=datetime.now(),
+            schema_version="1.0.0",
+        )
+    else:
+        metadata = Metadata(
+            auth=auth, publisher=publisher, time=datetime.now(), schema_version="1.0.0"
+        )
     event = KafkaEvent(metadata=metadata, data=data)
 
     return event
@@ -144,6 +150,7 @@ def get_topic_alternate(item_id: str) -> str:
 async def post_message(event: KafkaEvent) -> None:
     try:
         value = event.model_dump_json().encode("utf8")
+        logger.critical(value)
         topic = get_topic(event.data.payload.item)
 
         if producer is None:
@@ -167,42 +174,51 @@ async def alternate_message(event: KafkaEvent) -> None:
         raise HTTPException(status_code=500, detail=repr(exc)) from exc
 
 
-async def post_item(collection_id: str, item: Item) -> None:
+async def post_item(collection_id: str, item: Item, token_data: TokenData) -> None:
     payload = CreatePayload(method="POST", collection_id=collection_id, item=item)
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await post_message(event)
 
 
-async def modify_item(collection_id: str, item: Item, item_id: str) -> None:
+async def modify_item(
+    collection_id: str, item: Item, item_id: str, token_data: TokenData
+) -> None:
     payload = UpdatePayload(
         method="PUT", collection_id=collection_id, item=item, item_id=item_id
     )
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await post_message(event)
 
 
-async def revoke_item_hard(collection_id: str, item_id: str) -> None:
+async def revoke_item_hard(
+    collection_id: str, item_id: str, token_data: TokenData
+) -> None:
     payload = RevokePayload(
         method="DELETE", collection_id=collection_id, item_id=item_id
     )
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await alternate_message(event)
 
 
 async def partial_update_item(
-    collection_id: str, item_id: str, item: Dict[str, Any]
+    collection_id: str,
+    item_id: str,
+    item: Dict[str, Any],
+    token_data: TokenData,
 ) -> None:
     payload = PartialUpdatePayload(
         method="PATCH", collection_id=collection_id, item=item, item_id=item_id
     )
-    event = item_body(payload)
+    event = item_body(payload, token_data)
     await alternate_message(event)
 
 
 @app.post("/{collection_id}/items", status_code=202)
 async def create_item(
-    collection_id: str, item: Union[Item, ItemCollection]
-) -> Union[Item, ItemCollection]:
+    collection_id: str,
+    item: Item,
+    current_user: TokenData = Depends(get_current_active_user),
+) -> Item:
     """Add CREATE message to kafka event stream.
 
     Args:
@@ -213,22 +229,21 @@ async def create_item(
         Optional[stac_types.Item]: The item, or `None` if the item was successfully deleted.
     """
     logger.info("Creating %s item", collection_id)
-    if await check_item_exists1(collection_id, item.id):
-        logger.info("Item already exists")
+    if await check_item_exists(collection_id, item.id):
         raise HTTPException(status_code=409, detail="Item already exists")
 
-    logger.info("Item does not exist")
-    if isinstance(item, Item):
-        await post_item(collection_id, item)
-    else:
-        for i in item:
-            await post_item(collection_id, i)
+    await post_item(collection_id, item, current_user)
 
     return item
 
 
 @app.put("/{collection_id}/items/{item_id}")
-async def update_item(collection_id: str, item_id: str, item: Item) -> Item:
+async def update_item(
+    collection_id: str,
+    item_id: str,
+    item: Item,
+    current_user: TokenData = Depends(get_current_active_user),
+) -> Item:
     """Add UPDATE message to kafka event stream.
 
     Args:
@@ -245,9 +260,11 @@ async def update_item(collection_id: str, item_id: str, item: Item) -> Item:
 
     """
     logger.info("Updating %s item", collection_id)
+    if not await check_item_exists(collection_id, item_id):
+        raise HTTPException(status_code=409, detail="Cannot update non-existent item")
 
     try:
-        await modify_item(collection_id, item, item_id)
+        await modify_item(collection_id, item, item_id, current_user)
     except Exception as e:
         (f"Collection {collection_id} not found: {str(e)}")
 
@@ -255,7 +272,11 @@ async def update_item(collection_id: str, item_id: str, item: Item) -> Item:
 
 
 @app.delete("/{collection_id}/items/{item_id}")
-async def delete_item_hard(item_id: str, collection_id: str) -> None:
+async def delete_item_hard(
+    item_id: str,
+    collection_id: str,
+    current_user: TokenData = Depends(get_current_active_admin),
+) -> None:
     """Add DELETE message to kafka event stream.
 
     Args:
@@ -267,14 +288,19 @@ async def delete_item_hard(item_id: str, collection_id: str) -> None:
     """
     logger.info("Deleting %s item", collection_id)
 
-    await revoke_item_hard(collection_id, item_id)
+    if not await check_item_exists(collection_id, item_id):
+        raise HTTPException(status_code=409, detail="Cannot delete non-existent item")
+    await revoke_item_hard(collection_id, item_id, current_user)
 
     return None
 
 
 @app.patch("/{collection_id}/items/{item_id}")
 async def partial_update(
-    item_id: str, collection_id: str, item: Dict[str, Any]
+    item_id: str,
+    collection_id: str,
+    item: Dict[str, Any],
+    current_user: TokenData = Depends(get_current_active_user),
 ) -> None:
     """Add Update message to kafka event stream.
 
@@ -288,6 +314,8 @@ async def partial_update(
     """
     logger.info("Updating %s item", collection_id)
 
-    await partial_update_item(collection_id, item_id, item)
+    if not await check_item_exists(collection_id, item_id):
+        raise HTTPException(status_code=409, detail="Cannot update non-existent item")
+    await partial_update_item(collection_id, item_id, item, current_user)
 
     return None

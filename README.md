@@ -53,6 +53,8 @@ A utility for creating fake records is available as follows:
 foo@bar:~$ cd esgf-generator
 foo@bar:~$ poetry install
 foo@bar:~$ poetry run esgf_generator --help
+foo@bar:~$ Username: test_user
+foo@bar:~$ Password: test_user  # Can use test_admin for both username and password for additional privileges.
 Usage: esgf_generator [OPTIONS] COUNT
 
   Generate a number of ESGF items.
@@ -198,19 +200,19 @@ Done
 
 ## Further Work
 
-- [*] Simulate a second "Core Node" (approximating Globus)
-- [*] Provide an ingest API per simulated ESGF Core Node 
-- [ ] Provide Update and Revoke functionality
-- [ ] Provide replicate functionality
-- [*] Move to ESGF or CEDA repository
+- [x] Simulate a second "Core Node" (approximating Globus)
+- [x] Provide an ingest API per simulated ESGF Core Node 
+- [x] Provide Update and Revoke functionality
+- [x] Provide replicate functionality
+- [x] Move to ESGF or CEDA repository
 - [ ] Publish images to docker hub (ESGF account)
 - [ ] Provide Helm charts
 - [ ] Fix loging on the ingest API
 - [ ] Fully document
 - [ ] Improve CLI functionality
 - [ ] Move common modules and models to a shared library on pypi
-- [ ] Handle POSTs to STAC if the item already exists (should produce an error)
-- [ ] MongoDB (or alternative) persistent message dump
+- [x] Handle POSTs to STAC if the item already exists (should produce an error)
+- [x] MongoDB (or alternative) persistent message dump
 
 ## Basic Use
 
@@ -230,6 +232,8 @@ randomised CMIP6 / Cordex data:
 foo@bar:~$ cd esgf-generator
 foo@bar:~$ poetry install
 foo@bar:~$ poetry run esgf_generator 1000 --publish --node east
+foo@bar:~$ Username: test_user
+foo@bar:~$ Password: test_user  # Can use test_admin for both username and password for additional privileges.
 ...(many STAC records printed)...
 ```
 
