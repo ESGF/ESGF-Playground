@@ -4,22 +4,11 @@ Prototype consumer for ESGF. Takes events from KAFKA and sends them to an ESGF S
 
 import asyncio
 import logging
+import os
 import traceback
 
 import httpx
 from aiokafka.errors import KafkaError
-from esgf_playground_utils.config.kafka import Settings
-from esgf_playground_utils.models.kafka import (
-    CreatePayload,
-    Error,
-    ErrorType,
-    KafkaEvent,
-    PartialUpdatePayload,
-    RevokePayload,
-    UpdatePayload,
-)
-from pydantic import ValidationError
-
 from esgf_consumer.collection import ensure_collection
 from esgf_consumer.consumers import get_consumer
 from esgf_consumer.exceptions import (
@@ -33,6 +22,17 @@ from esgf_consumer.items import (
     update_item,
 )
 from esgf_consumer.producers import get_producer
+from esgf_playground_utils.config.kafka import Settings
+from esgf_playground_utils.models.kafka import (
+    CreatePayload,
+    Error,
+    ErrorType,
+    KafkaEvent,
+    PartialUpdatePayload,
+    RevokePayload,
+    UpdatePayload,
+)
+from pydantic import ValidationError
 
 logging.getLogger().setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -56,6 +56,8 @@ async def consume(settings: Settings) -> None:
     async with httpx.AsyncClient(timeout=5.0) as client:
 
         logger.critical("http client started.")
+        rediness_file = open("/tmp/healthcheck", "x", encoding="utf-8")
+
         try:
             # Consume messages
             async for msg in consumer:
@@ -133,6 +135,9 @@ async def consume(settings: Settings) -> None:
             logger.critical("Consumer stopped.")
             await producer.stop()
             logger.critical("Producer stopped.")
+
+            rediness_file.close()
+            os.remove("/tmp/healthcheck")
 
     return None
 
