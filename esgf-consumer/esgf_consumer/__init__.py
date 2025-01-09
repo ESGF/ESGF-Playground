@@ -56,7 +56,7 @@ async def consume(settings: Settings) -> None:
     async with httpx.AsyncClient(timeout=5.0) as client:
 
         logger.critical("http client started.")
-        rediness_file = open("/tmp/healthcheck", "x", encoding="utf-8")
+        readiness_file = open("/tmp/healthcheck", "x", encoding="utf-8")
 
         try:
             # Consume messages
@@ -136,7 +136,7 @@ async def consume(settings: Settings) -> None:
             await producer.stop()
             logger.critical("Producer stopped.")
 
-            rediness_file.close()
+            readiness_file.close()
             os.remove("/tmp/healthcheck")
 
     return None
