@@ -7,6 +7,7 @@ async def get_consumer(settings: Settings) -> AIOKafkaConsumer:
         group_id=settings.consumer_group,
         bootstrap_servers=settings.bootstrap_servers,
         sasl_mechanism=settings.sasl_mechanism,
+        security_protocol=settings.security_protocol,
         sasl_plain_username=settings.sasl_plain_username,
         sasl_plain_password=settings.sasl_plain_password,
         enable_auto_commit=True,
