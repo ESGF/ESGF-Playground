@@ -53,7 +53,7 @@ async def consume(settings: Settings) -> None:
     logger.critical("Producer started.")
 
     logger.critical("Starting http client...")
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    async with httpx.AsyncClient(timeout=5.0, verify=False) as client:
 
         logger.critical("http client started.")
         readiness_file = open("/tmp/healthcheck", "x", encoding="utf-8")
