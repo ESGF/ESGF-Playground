@@ -16,7 +16,7 @@ async def create_item(
     path = f"collections/{collection_id}/items"
     url = urljoin(str(settings.stac_server), path)
 
-    logger.critical("Posting %s to %s", getattr(item.properties, "instance_id"), url)
+    logger.critical("Posting %s to %s", getattr(item, "id"), url)
     result = await client.post(url, content=(item.model_dump_json()), timeout=5)
     if result.status_code < 300:
         logger.critical("Item posted")
@@ -36,7 +36,7 @@ async def update_item(
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
 
-    logger.critical("Updating %s to %s", getattr(item.properties, "instance_id"), url)
+    logger.critical("Updating %s to %s", getattr(item, "id"), url)
     result = await client.put(url, content=(item.model_dump_json()), timeout=5)
     if result.status_code < 300:
         logger.critical("Item updated")
