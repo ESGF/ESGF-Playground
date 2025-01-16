@@ -5,19 +5,26 @@ from urllib.parse import urljoin
 
 import httpx
 from esgf_playground_utils.config.kafka import Settings
+from httpx_auth import OAuth2ClientCredentials
 from stac_pydantic.item import Item
 
 logger = logging.getLogger(__name__)
 
 
 async def create_item(
-    collection_id: str, item: Item, settings: Settings, client: httpx.AsyncClient
+    collection_id: str,
+    item: Item,
+    settings: Settings,
+    client: httpx.AsyncClient,
+    auth: OAuth2ClientCredentials,
 ) -> None:
     path = f"collections/{collection_id}/items"
     url = urljoin(str(settings.stac_server), path)
 
     logger.critical("Posting %s to %s", getattr(item, "id"), url)
-    result = await client.post(url, content=(item.model_dump_json()), timeout=5)
+    result = await client.post(
+        url, content=(item.model_dump_json()), timeout=5, auth=auth
+    )
     if result.status_code < 300:
         logger.critical("Item posted")
 
@@ -32,12 +39,15 @@ async def update_item(
     item_id: str,
     settings: Settings,
     client: httpx.AsyncClient,
+    auth: OAuth2ClientCredentials,
 ) -> None:
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
 
     logger.critical("Updating %s to %s", getattr(item, "id"), url)
-    result = await client.put(url, content=(item.model_dump_json()), timeout=5)
+    result = await client.put(
+        url, content=(item.model_dump_json()), timeout=5, auth=auth
+    )
     if result.status_code < 300:
         logger.critical("Item updated")
 
@@ -48,14 +58,18 @@ async def update_item(
 
 
 async def hard_delete_item(
-    collection_id: str, item_id: str, settings: Settings, client: httpx.AsyncClient
+    collection_id: str,
+    item_id: str,
+    settings: Settings,
+    client: httpx.AsyncClient,
+    auth: OAuth2ClientCredentials,
 ) -> None:
 
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
 
     logger.critical("Deleting %s at %s", item_id, url)
-    result = await client.delete(url, timeout=5)
+    result = await client.delete(url, timeout=5, auth=auth)
     if result.status_code < 300:
         logger.critical("Item Deleted")
 
@@ -71,12 +85,13 @@ async def partial_update_item(
     item_id: str,
     settings: Settings,
     client: httpx.AsyncClient,
+    auth: OAuth2ClientCredentials,
 ) -> None:
     path = f"collections/{collection_id}/items/{item_id}"
     url = urljoin(str(settings.stac_server), path)
 
     logger.critical("Partially updating %s at %s", item_id, url)
-    result = await client.patch(url, content=json.dumps(item), timeout=5)
+    result = await client.patch(url, content=json.dumps(item), timeout=5, auth=auth)
     if result.status_code < 300:
         logger.critical("Item Partially Updated")
 

@@ -1,18 +1,22 @@
 from urllib.parse import urljoin
 
 import httpx
+from httpx_auth import OAuth2ClientCredentials
 from pydantic_core import Url
 
 
 async def ensure_collection(
-    stac_server: Url, collection_id: str, client: httpx.AsyncClient
+    stac_server: Url,
+    collection_id: str,
+    client: httpx.AsyncClient,
+    auth: OAuth2ClientCredentials,
 ) -> None:
     """Check the existence of a named collection, create it if it doesn't exist"""
 
     collection_exists = await _check_collection(stac_server, collection_id, client)
 
     if not collection_exists:
-        await _create_collection(stac_server, collection_id, client)
+        await _create_collection(stac_server, collection_id, client, auth)
 
     return None
 
@@ -34,7 +38,10 @@ async def _check_collection(
 
 
 async def _create_collection(
-    stac_server: Url, collection_id: str, client: httpx.AsyncClient
+    stac_server: Url,
+    collection_id: str,
+    client: httpx.AsyncClient,
+    auth: OAuth2ClientCredentials,
 ) -> None:
     """Create a collection"""
 
@@ -84,6 +91,7 @@ async def _create_collection(
                 },
             ],
         },
+        auth=auth,
     )
 
     if create_result.status_code < 300:

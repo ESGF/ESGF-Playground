@@ -32,6 +32,7 @@ from esgf_playground_utils.models.kafka import (
     RevokePayload,
     UpdatePayload,
 )
+from httpx_auth import OAuth2ClientCredentials
 from pydantic import ValidationError
 
 logging.getLogger().setLevel(logging.DEBUG)
@@ -53,6 +54,16 @@ async def consume(settings: Settings) -> None:
     logger.critical("Producer started.")
 
     logger.critical("Starting http client...")
+
+    auth = None
+    if stac_auth_token_url := os.environ.get("STAC_AUTH_TOKEN_URL", None):
+
+        auth = OAuth2ClientCredentials(
+            stac_auth_token_url,
+            os.environ.get("STAC_AUTH_CLIENT_ID", None),
+            os.environ.get("STAC_AUTH_CLIENT_SECRET", None),
+        )
+
     async with httpx.AsyncClient(timeout=5.0, verify=False) as client:
 
         logger.critical("http client started.")
@@ -65,7 +76,7 @@ async def consume(settings: Settings) -> None:
                     logger.critical("Received message: %s", msg)
                     event = KafkaEvent.model_validate_json(msg.value.decode("utf-8"))
 
-                    await _handle_message(client, event, settings)
+                    await _handle_message(client, auth, event, settings)
 
                 except ESGFConsumerUnknownPayloadError:
                     logger.exception("Received a valid but unknown payload")
@@ -143,10 +154,16 @@ async def consume(settings: Settings) -> None:
 
 
 async def _handle_message(
-    client: httpx.AsyncClient, event: KafkaEvent, settings: Settings
+    client: httpx.AsyncClient,
+    auth: OAuth2ClientCredentials,
+    event: KafkaEvent,
+    settings: Settings,
 ) -> None:
     await ensure_collection(
-        settings.stac_server, event.data.payload.collection_id, client
+        settings.stac_server,
+        event.data.payload.collection_id,
+        client,
+        auth,
     )
     logger.critical(
         "Collection %s confirmed on %s",
@@ -160,6 +177,7 @@ async def _handle_message(
                 event.data.payload.item,
                 settings,
                 client,
+                auth,
             )
             logger.critical("Item %s created.", event.data.payload.item.id)
 
@@ -170,6 +188,7 @@ async def _handle_message(
                 event.data.payload.item.id,
                 settings,
                 client,
+                auth,
             )
             logger.critical("Item %s updated.", event.data.payload.item.id)
 
@@ -179,6 +198,7 @@ async def _handle_message(
                 event.data.payload.item_id,
                 settings,
                 client,
+                auth,
             )
             logger.critical("Item %s deleted.", event.data.payload.item_id)
 
@@ -189,6 +209,7 @@ async def _handle_message(
                 event.data.payload.item_id,
                 settings,
                 client,
+                auth,
             )
             logger.critical("Item %s partially Updated.", event.data.payload.item_id)
 
