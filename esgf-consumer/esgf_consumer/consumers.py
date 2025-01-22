@@ -4,7 +4,9 @@ from esgf_playground_utils.config.kafka import Settings
 
 async def get_consumer(settings: Settings) -> AIOKafkaConsumer:
     ssl_context = (
-        helpers.create_ssl_context() if settings.sasl_mechanism == "SASL_SSL" else None
+        helpers.create_ssl_context()
+        if settings.security_protocol == "SASL_SSL"
+        else None
     )
     consumer = AIOKafkaConsumer(
         group_id=settings.consumer_group,
