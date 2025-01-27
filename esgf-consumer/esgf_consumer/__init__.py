@@ -227,7 +227,15 @@ async def _handle_message(
             logger.critical("Item %s partially Updated.", event.data.payload.item_id)
 
         case _:
-            raise ESGFConsumerUnknownPayloadError
+            await create_item(
+                event.data.payload.collection_id,
+                event.data.payload.item,
+                settings,
+                client,
+                auth,
+            )
+            logger.critical("Item %s created ANYWAY.", event.data.payload.item.id)
+            # raise ESGFConsumerUnknownPayloadError
 
 
 if __name__ == "__main__":
