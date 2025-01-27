@@ -22,12 +22,12 @@ from esgf_consumer.items import (
     update_item,
 )
 from esgf_consumer.producers import get_producer
+from esgf_consumer.types import TempKafkaEvent
 from esgf_playground_utils.config.kafka import Settings
 from esgf_playground_utils.models.kafka import (
     CreatePayload,
     Error,
     ErrorType,
-    KafkaEvent,
     PartialUpdatePayload,
     RevokePayload,
     UpdatePayload,
@@ -74,7 +74,9 @@ async def consume(settings: Settings) -> None:
             async for msg in consumer:
                 try:
                     logger.critical("Received message: %s", msg)
-                    event = KafkaEvent.model_validate_json(msg.value.decode("utf-8"))
+                    event = TempKafkaEvent.model_validate_json(
+                        msg.value.decode("utf-8")
+                    )
 
                     await _handle_message(client, auth, event, settings)
 
@@ -161,7 +163,7 @@ async def consume(settings: Settings) -> None:
 async def _handle_message(
     client: httpx.AsyncClient,
     auth: OAuth2ClientCredentials,
-    event: KafkaEvent,
+    event: TempKafkaEvent,
     settings: Settings,
 ) -> None:
     await ensure_collection(
