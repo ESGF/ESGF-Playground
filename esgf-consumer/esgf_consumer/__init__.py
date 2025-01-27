@@ -74,14 +74,14 @@ async def consume(settings: Settings) -> None:
             async for msg in consumer:
                 try:
                     logger.critical("Received message: %s", msg)
+                    msg.value["data"]["payload"]["collection_id"] = msg.value["data"][
+                        "payload"
+                    ]["collection_id"].lower()
+                    msg.value["data"]["payload"]["item"]["collection"] = msg.value[
+                        "data"
+                    ]["payload"]["item"]["collection"].lower()
                     event = TempKafkaEvent.model_validate_json(
                         msg.value.decode("utf-8")
-                    )
-                    event.data.payload.collection_id = (
-                        event.data.payload.collection_id.lower()
-                    )
-                    event.data.payload.item.collection = (
-                        event.data.payload.item.collection.lower()
                     )
 
                     await _handle_message(client, auth, event, settings)
