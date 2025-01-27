@@ -87,7 +87,8 @@ async def consume(settings: Settings) -> None:
                         error_type=ErrorType.payload,
                     )
                     await producer.send_and_wait(
-                        "esgf_error", error.model_dump_json().encode()
+                        "esgf2.data-challenges.01.errors",
+                        error.model_dump_json().encode(),
                     )
 
                 except ESGFConsumerNotImplementedPayloadError:
@@ -101,7 +102,8 @@ async def consume(settings: Settings) -> None:
                         error_type=ErrorType.payload,
                     )
                     await producer.send_and_wait(
-                        "esgf_error", error.model_dump_json().encode()
+                        "esgf2.data-challenges.01.errors",
+                        error.model_dump_json().encode(),
                     )
 
                 except httpx.HTTPError:
@@ -113,7 +115,8 @@ async def consume(settings: Settings) -> None:
                         error_type=ErrorType.stac_server,
                     )
                     await producer.send_and_wait(
-                        "esgf_error", error.model_dump_json().encode()
+                        "esgf2.data-challenges.01.errors",
+                        error.model_dump_json().encode(),
                     )
 
                 except ValidationError:
@@ -125,7 +128,8 @@ async def consume(settings: Settings) -> None:
                         error_type=ErrorType.payload,
                     )
                     await producer.send_and_wait(
-                        "esgf_error", error.model_dump_json().encode()
+                        "esgf2.data-challenges.01.errors",
+                        error.model_dump_json().encode(),
                     )
 
                 except KafkaError:
@@ -137,7 +141,8 @@ async def consume(settings: Settings) -> None:
                         error_type=ErrorType.kafka,
                     )
                     await producer.send_and_wait(
-                        "esgf_error", error.model_dump_json().encode()
+                        "esgf2.data-challenges.01.errors",
+                        error.model_dump_json().encode(),
                     )
 
         finally:
