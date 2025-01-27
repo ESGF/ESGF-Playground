@@ -77,6 +77,12 @@ async def consume(settings: Settings) -> None:
                     event = TempKafkaEvent.model_validate_json(
                         msg.value.decode("utf-8")
                     )
+                    event.data.payload.collection_id = (
+                        event.data.payload.collection_id.lower()
+                    )
+                    event.data.payload.item.collection = (
+                        event.data.payload.item.collection.lower()
+                    )
 
                     await _handle_message(client, auth, event, settings)
 
