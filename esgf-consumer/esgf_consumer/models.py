@@ -123,8 +123,8 @@ class Metadata(BaseModel):
     Multiple metadata attributes required for ESGF but not part of the STAC payload.
     """
 
-    event_id: Optional[str] = None
-    request_id: Optional[str] = None
+    event_id: str | None = None
+    request_id: str | None = None
     auth: Auth
     publisher: Publisher
     time: datetime
